@@ -1,0 +1,3 @@
+[submodule "extensions/cocos-mcp-server"]
+	path = extensions/cocos-mcp-server
+	url = https://gitlab.umcasual.cn/mcp/cocos-mcp-server.git
