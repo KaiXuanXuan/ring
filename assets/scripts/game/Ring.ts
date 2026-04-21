@@ -6,6 +6,9 @@ const { ccclass, property } = _decorator;
 
 @ccclass('Ring')
 export class Ring extends Component {
+  // Ring.prefab 尺寸约 380x359，圆心偏移(0,20)时，基准半径按 180 计算。
+  public static readonly PREFAB_BASE_RADIUS: number = 180;
+
   @property
   rotationSpeed: number = 1;
 

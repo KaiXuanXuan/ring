@@ -15,7 +15,9 @@ export class Runtime extends Component {
   @property(Prefab)
   ringPrefab: Prefab | null = null;
 
-  private readonly ringRadius: number = 100;
+  // 运行时保持与 Ring.ts 基准一致：prefab 半径 180，缩放 0.5 后实际半径 90。
+  private readonly ringScale: number = 0.5;
+  private readonly ringRadius: number = Ring.PREFAB_BASE_RADIUS * 0.5;
 
   @property
   ringCenterOffsetX: number = 0;
@@ -198,7 +200,7 @@ export class Runtime extends Component {
       ringState.config.position.y + this.ringCenterOffsetY,
       0
     );
-    ringNode.setScale(0.5, 0.5, 1);
+    ringNode.setScale(this.ringScale, this.ringScale, 1);
     ringNode.name = ringState.id;
     this.areaNode.addChild(ringNode);
     this.ringNodes.set(ringState.id, ringNode);
