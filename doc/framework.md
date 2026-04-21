@@ -12,7 +12,7 @@
   - `Types`：关卡类型定义。
   - `Repo`：关卡配置读取（确定性）。
 - `game/runtime`
-  - `Runtime`：按配置生成并管理实体。
+  - `Runtime`：按配置生成并管理实体（固定坐标 + 随机颜色 + 选中态表现）。
 - `game/rules`
   - `Rules`：核心判定纯函数。
 - `game/components`
@@ -32,15 +32,19 @@
 1. `scripts/scene/Main.ts` 监听 GM 事件并切换 `LevelSelection` / `Game` 显隐。
 2. 进入 `Game` 时读取当前关卡 ID。
 3. `Repo` 返回 `LevelConfig`。
-4. `Runtime` 在 `Game/Area` 下创建 `Ring/Buckle/Rock/Bomb` 实体。
-5. 交互组件只采集输入与状态变化。
-6. 所有业务判定统一调用 `Rules`。
-7. 判定结果回写 `Runtime`，推进关卡状态。
+4. `Runtime` 在 `Game/Area` 下按配置坐标创建 `Ring/Buckle/Rock/Bomb` 实体。
+5. `Runtime` 为每个 `Ring` 从 `assets/resources/ring/1~7` 随机分配颜色贴图。
+6. 按住某个 `Ring` 时叠加 `assets/resources/ring/绿圈.png` 作为选中态。
+7. 交互组件只采集输入与状态变化。
+8. 所有业务判定统一调用 `Rules`。
+9. 判定结果回写 `Runtime`，推进关卡状态。
 
 ## 约束规则
 - 规则唯一入口：仅 `scripts/game/rules/Rules.ts` 可定义玩法判定。
 - 配置唯一入口：仅 `scripts/game/level/Repo.ts` 读关卡数据。
 - 资源唯一入口：预制体统一放在 `resources/prefab`。
+- 颜色资源入口：`Ring` 颜色仅使用 `assets/resources/ring/1~7`。
+- 选中态资源入口：仅使用 `assets/resources/ring/绿圈.png`。
 - 场景事件入口：仅 `scripts/scene/Main.ts` 监听 GM 事件并驱动主界面切换。
 - 禁止兜底：配置错误、引用错误、状态错误直接抛错。
 

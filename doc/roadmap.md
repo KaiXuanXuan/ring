@@ -11,6 +11,8 @@
 - 建立 `scripts/game/level/Types.ts` 与 `scripts/game/level/Repo.ts`。
 - 落地 `Ring/Buckle/Rock/Bomb` 统一运行时生成（`scripts/game/runtime/Runtime.ts`）。
 - 运行时实体统一挂载到 `Game/Area`。
+- `Ring/Buckle` 坐标严格使用关卡配置；`Ring` 颜色从 `assets/resources/ring/1~7` 随机。
+- 增加按住选中态：按住时叠加 `assets/resources/ring/绿圈.png`，松手移除。
 - 实现 4 个核心判定：
   - `isRingConstrained`
   - `canRingRotate`
