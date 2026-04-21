@@ -4,16 +4,19 @@
 - 目标：先跑通核心玩法闭环，再快速扩关。
 - 策略：`统一预制体 + 关卡配置`，不做“每关一个预制体”。
 - 架构落位：核心代码放 `scripts/game`，预制体放 `resources/prefab`。
+- 场景约定：`Main.scene` 下包含 `LevelSelection`、`Game`、`Game/Area`。
 
 ## M1 核心闭环（优先）
-- 建立 `game/level/types` 与 `game/level/repo`。
-- 落地 `Ring/Buckle/Rock/Bomb` 统一运行时生成（`game/runtime`）。
+- 建立 `scripts/scene/Main.ts`，通过 GM 事件驱动 `LevelSelection` 与 `Game` 切换。
+- 建立 `scripts/game/level/Types.ts` 与 `scripts/game/level/Repo.ts`。
+- 落地 `Ring/Buckle/Rock/Bomb` 统一运行时生成（`scripts/game/runtime/Runtime.ts`）。
+- 运行时实体统一挂载到 `Game/Area`。
 - 实现 4 个核心判定：
   - `isRingConstrained`
   - `canRingRotate`
   - `canRingRelease`
   - `shouldBombExplodeOnRelease`
-- 判定实现文件统一为 `game/rules/rules.ts`。
+- 判定实现文件统一为 `scripts/game/rules/Rules.ts`。
 - 完成最小可玩样例关（1~3 关）。
 
 ## M2 关卡生产
