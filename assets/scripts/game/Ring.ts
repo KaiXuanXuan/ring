@@ -1,0 +1,206 @@
+import { _decorator, Component, EventTouch, Input, Node, Sprite, SpriteFrame, Vec2, Vec3, input, resources } from 'cc';
+import { Runtime } from './Runtime';
+import type { BuckleConfig } from './Types';
+
+const { ccclass, property } = _decorator;
+
+@ccclass('Ring')
+export class Ring extends Component {
+  @property
+  rotationSpeed: number = 1;
+
+  private radius: number = 180;
+
+  private runtime: Runtime | null = null;
+  private ringId: string = '';
+  private isDragging: boolean = false;
+  private lastTouchPos: Vec2 = new Vec2();
+  private startAngle: number = 0;
+  private bombId: string | null = null;
+
+  private bucklesNode: Node | null = null;
+  private bombNode: Node | null = null;
+  private selectedNode: Node | null = null;
+  private gapNode: Node | null = null;
+  private static activeDraggingRingId: string | null = null;
+
+  onLoad(): void {
+    this.cacheNodes();
+    input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
+    input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+    input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+    input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+  }
+
+  onDestroy(): void {
+    input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
+    input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+    input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+    input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+    this.unschedule(this.onBombTimeout);
+    if (Ring.activeDraggingRingId === this.ringId) {
+      Ring.activeDraggingRingId = null;
+    }
+  }
+
+  setup(runtime: Runtime, ringId: string, radius: number): void {
+    this.runtime = runtime;
+    this.ringId = ringId;
+    this.radius = radius;
+  }
+
+  setRingColor(colorIndex: number): void {
+    const sprite = this.getComponent(Sprite);
+    if (!sprite) return;
+    resources.load(`ring/${colorIndex}/spriteFrame`, SpriteFrame, (err, frame) => {
+      if (err || !frame) {
+        throw new Error(`加载锁环颜色失败: ${colorIndex}`);
+      }
+      sprite.spriteFrame = frame;
+    });
+  }
+
+  setSelectedVisible(visible: boolean): void {
+    if (!this.selectedNode) throw new Error('Ring 缺少 Selected 节点');
+    this.selectedNode.active = visible;
+  }
+
+  setRockVisible(visible: boolean): void {
+    if (!this.gapNode) throw new Error('Ring 缺少 Gap 节点');
+    this.gapNode.active = visible;
+  }
+
+  setBombVisible(visible: boolean): void {
+    if (!this.bombNode) throw new Error('Ring 缺少 Bomb 节点');
+    this.bombNode.active = visible;
+    if (!visible) {
+      this.unschedule(this.onBombTimeout);
+      this.bombId = null;
+    }
+  }
+
+  setGapPolar(radius: number, angleDeg: number): void {
+    if (!this.gapNode) throw new Error('Ring 缺少 Gap 节点');
+    const rad = (angleDeg * Math.PI) / 180;
+    this.gapNode.setPosition(radius * Math.cos(rad), radius * Math.sin(rad), 0);
+  }
+
+  syncBucklesVisible(activeBuckles: BuckleConfig[]): void {
+    if (!this.bucklesNode) throw new Error('Ring 缺少 Buckles 节点');
+    const buckleNodes = this.bucklesNode.children;
+    /**
+     * 预制体 Buckles 下固定 5 个 Buckle（按节点名）：
+     * Buckle1 -> -90°
+     * Buckle2 -> -45°
+     * Buckle3 ->   0°
+     * Buckle4 ->  45°
+     * Buckle5 ->  90°
+     *
+     * 这里只控制显隐：显示的 Buckle 参与判定，隐藏的不参与判定。
+     */
+    if (buckleNodes.length < 5) {
+      throw new Error('Buckles 节点下至少需要 5 个 Buckle 子节点');
+    }
+
+    for (const node of buckleNodes) {
+      node.active = false;
+    }
+
+    for (const buckle of activeBuckles) {
+      const match = /(\d+)$/.exec(buckle.id);
+      if (!match) {
+        continue;
+      }
+      const index = Number(match[1]) - 1;
+      if (index >= 0 && index < buckleNodes.length) {
+        buckleNodes[index].active = true;
+      }
+    }
+  }
+
+  armBombTimeout(bombId: string, timeoutSec: number): void {
+    this.unschedule(this.onBombTimeout);
+    this.bombId = bombId;
+    this.scheduleOnce(this.onBombTimeout, timeoutSec);
+  }
+
+  private onBombTimeout = (): void => {
+    if (!this.runtime || !this.bombId) return;
+    const bombId = this.bombId;
+    this.bombId = null;
+    this.setBombVisible(false);
+    this.runtime.handleBombTimeout(bombId);
+  };
+
+  private cacheNodes(): void {
+    this.bucklesNode = this.node.getChildByName('Buckles');
+    this.bombNode = this.node.getChildByName('Bomb');
+    this.selectedNode = this.node.getChildByName('Selected');
+    this.gapNode = this.node.getChildByName('Gap');
+    if (!this.bucklesNode || !this.bombNode || !this.selectedNode || !this.gapNode) {
+      throw new Error('Ring 预制体缺少子节点: Buckles/Bomb/Selected/Gap');
+    }
+  }
+
+  private onTouchStart(event: EventTouch): void {
+    if (Ring.activeDraggingRingId && Ring.activeDraggingRingId !== this.ringId) return;
+    if (!this.isTouchOnNode(event)) return;
+    this.isDragging = true;
+    Ring.activeDraggingRingId = this.ringId;
+    const pos = event.getUILocation();
+    this.lastTouchPos.set(pos.x, pos.y);
+    this.startAngle = this.node.eulerAngles.z;
+    this.setSelectedVisible(true);
+  }
+
+  private onTouchMove(event: EventTouch): void {
+    if (!this.isDragging || !this.runtime) return;
+    const pos = event.getUILocation();
+    const currentPos = new Vec2(pos.x, pos.y);
+    const delta = this.calculateAngleDelta(this.lastTouchPos, currentPos);
+    const appliedDelta = delta * this.rotationSpeed;
+    if (this.runtime.rotateRing(this.ringId, appliedDelta, false)) {
+      const newAngle = (this.startAngle + appliedDelta) % 360;
+      this.node.setRotationFromEuler(0, 0, newAngle);
+      this.startAngle = newAngle;
+    }
+    this.lastTouchPos.set(currentPos);
+  }
+
+  private onTouchEnd(): void {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    if (Ring.activeDraggingRingId === this.ringId) {
+      Ring.activeDraggingRingId = null;
+    }
+    this.setSelectedVisible(false);
+    if (this.runtime) {
+      this.runtime.tryReleaseRing(this.ringId);
+    }
+  }
+
+  private isTouchOnNode(event: EventTouch): boolean {
+    const pos = event.getUILocation();
+    const touchPos = new Vec2(pos.x, pos.y);
+    const worldPos = new Vec3();
+    this.node.getWorldPosition(worldPos);
+    const dx = touchPos.x - worldPos.x;
+    const dy = touchPos.y - worldPos.y;
+    return Math.sqrt(dx * dx + dy * dy) < this.radius;
+  }
+
+  private calculateAngleDelta(from: Vec2, to: Vec2): number {
+    const worldPos = new Vec3();
+    this.node.getWorldPosition(worldPos);
+    const vec1 = new Vec2(from.x - worldPos.x, from.y - worldPos.y);
+    const vec2 = new Vec2(to.x - worldPos.x, to.y - worldPos.y);
+    Vec2.normalize(vec1, vec1);
+    Vec2.normalize(vec2, vec2);
+    const dot = Vec2.dot(vec1, vec2);
+    const cross = vec1.x * vec2.y - vec1.y * vec2.x;
+    let angle = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+    if (cross < 0) angle = -angle;
+    return angle;
+  }
+}
+
