@@ -4,6 +4,14 @@
 
   /* Add your custom configuration here. */
   "compilerOptions": {
-    "strict": false
-  }
+    "strict": false,
+    "lib": ["ES2018", "DOM"],
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0"
+  },
+  "exclude": [
+    "node_modules",
+    "temp",
+    "extensions"
+  ]
 }
