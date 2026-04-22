@@ -93,6 +93,45 @@ export class Runtime extends Component {
     }
   }
 
+  applyHintRelease(): void {
+    if (!this.state) return;
+
+    const candidateRings = Array.from(this.state.rings.values()).filter((ring) => {
+      if (ring.isReleased) return false;
+      return !this.releaseQueue.some((item) => item.ringId === ring.id);
+    });
+    if (candidateRings.length === 0) return;
+
+    const edgeTolerance = 1e-6;
+    const distanceLevels = Array.from(
+      new Set(
+        candidateRings.map((ring) => ring.config.position.x * ring.config.position.x + ring.config.position.y * ring.config.position.y)
+      )
+    ).sort((a, b) => b - a);
+
+    const selectedIds: string[] = [];
+    for (const distanceSq of distanceLevels) {
+      if (selectedIds.length >= 2) break;
+      const edgeRings = candidateRings.filter((ring) => {
+        const ringDistanceSq = ring.config.position.x * ring.config.position.x + ring.config.position.y * ring.config.position.y;
+        return Math.abs(ringDistanceSq - distanceSq) <= edgeTolerance;
+      });
+
+      const prioritized = edgeRings.filter((ring) => ring.hasBomb || ring.hasRock);
+      const normal = edgeRings.filter((ring) => !ring.hasBomb && !ring.hasRock);
+
+      const remain = 2 - selectedIds.length;
+      selectedIds.push(...this.pickRandomRingIds(prioritized, remain));
+      if (selectedIds.length < 2) {
+        selectedIds.push(...this.pickRandomRingIds(normal, 2 - selectedIds.length));
+      }
+    }
+
+    for (const ringId of selectedIds) {
+      this.releaseRing(ringId, false);
+    }
+  }
+
   canSelectRing(ringId: string): boolean {
     if (!this.state) return false;
     const ring = this.state.rings.get(ringId);
@@ -351,6 +390,16 @@ export class Runtime extends Component {
       // 触发关卡完成事件
       GM.event.emit('levelComplete');
     }
+  }
+
+  private pickRandomRingIds(rings: RingState[], count: number): string[] {
+    if (count <= 0 || rings.length === 0) return [];
+    const pool = [...rings];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, Math.min(count, pool.length)).map((ring) => ring.id);
   }
 
   private createState(config: LevelConfig): LevelState {

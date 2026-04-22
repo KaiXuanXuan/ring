@@ -45,6 +45,7 @@ export class Main extends Component {
   private readonly onPauseGameHandler = this.pauseGame.bind(this);
   private readonly onResumeGameHandler = this.resumeGame.bind(this);
   private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
+  private readonly onHintHandler = this.onHint.bind(this);
   private readonly onTimeoutHandler = this.onTimeout.bind(this);
   private readonly onLevelCompleteHandler = this.onLevelComplete.bind(this);
   private readonly onOpenFailDialogHandler = this.onOpenFailDialog.bind(this);
@@ -60,6 +61,7 @@ export class Main extends Component {
     GM.event.on('startLevel', this.onStartLevelHandler);
     GM.event.on('pauseGame', this.onPauseGameHandler);
     GM.event.on('resumeGame', this.onResumeGameHandler);
+    GM.event.on('hint', this.onHintHandler);
     GM.event.on('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.on('timeout', this.onTimeoutHandler);
     GM.event.on('levelComplete', this.onLevelCompleteHandler);
@@ -78,6 +80,7 @@ export class Main extends Component {
     GM.event.off('startLevel', this.onStartLevelHandler);
     GM.event.off('pauseGame', this.onPauseGameHandler);
     GM.event.off('resumeGame', this.onResumeGameHandler);
+    GM.event.off('hint', this.onHintHandler);
     GM.event.off('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.off('timeout', this.onTimeoutHandler);
     GM.event.off('levelComplete', this.onLevelCompleteHandler);
@@ -142,6 +145,13 @@ export class Main extends Component {
   private resumeGame(): void {
     // Resume timer
     GM.event.emit('resumeTimer');
+  }
+
+  /**
+   * Apply gameplay hint.
+   */
+  private onHint(): void {
+    this.runtime?.applyHintRelease();
   }
 
   /**
