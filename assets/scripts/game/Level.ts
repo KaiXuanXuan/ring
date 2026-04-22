@@ -26,37 +26,40 @@ export class Level extends Component {
   private currentLevel: number = 1;
   private totalTime: number = 120; // Total time per level in seconds
   private remainingTime: number = 120;
-  private timerInterval: number = 0;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
+  private readonly onOpenTimeoutDialogHandler = this.onOpenTimeoutDialog.bind(this);
+  private readonly onOpenWinDialogHandler = this.onOpenWinDialog.bind(this);
+  private readonly onPauseTimerHandler = this.onPauseTimer.bind(this);
+  private readonly onResumeTimerHandler = this.onResumeTimer.bind(this);
+  private readonly onRestartLevelHandler = this.onRestartLevel.bind(this);
 
   onLoad(): void {
     // Register event listeners
-    this.onOpenTimeoutDialog = this.onOpenTimeoutDialog.bind(this);
-    this.onOpenWinDialog = this.onOpenWinDialog.bind(this);
-    this.onPauseTimer = this.onPauseTimer.bind(this);
-    this.onResumeTimer = this.onResumeTimer.bind(this);
-    this.onRestartLevel = this.onRestartLevel.bind(this);
-
-    GM.event.on('openTimeoutDialog', this.onOpenTimeoutDialog);
-    GM.event.on('openWinDialog', this.onOpenWinDialog);
-    GM.event.on('pauseTimer', this.onPauseTimer);
-    GM.event.on('resumeTimer', this.onResumeTimer);
-    GM.event.on('restartLevel', this.onRestartLevel);
+    GM.event.on('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
+    GM.event.on('openWinDialog', this.onOpenWinDialogHandler);
+    GM.event.on('pauseTimer', this.onPauseTimerHandler);
+    GM.event.on('resumeTimer', this.onResumeTimerHandler);
+    GM.event.on('restartLevel', this.onRestartLevelHandler);
   }
 
   onDestroy(): void {
     this.stopTimer();
-    GM.event.off('openTimeoutDialog', this.onOpenTimeoutDialog);
-    GM.event.off('openWinDialog', this.onOpenWinDialog);
-    GM.event.off('pauseTimer', this.onPauseTimer);
-    GM.event.off('resumeTimer', this.onResumeTimer);
-    GM.event.off('restartLevel', this.onRestartLevel);
+    GM.event.off('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
+    GM.event.off('openWinDialog', this.onOpenWinDialogHandler);
+    GM.event.off('pauseTimer', this.onPauseTimerHandler);
+    GM.event.off('resumeTimer', this.onResumeTimerHandler);
+    GM.event.off('restartLevel', this.onRestartLevelHandler);
   }
 
   /**
    * Initialize level display and start timer
    */
   initLevel(level: number): void {
+    console.log('[Level] initLevel called with level:', level);
+    console.log('[Level] timerLabel:', this.timerLabel);
+    console.log('[Level] progressFill:', this.progressFill);
+    console.log('[Level] levelLabel:', this.levelLabel);
     this.currentLevel = level;
     this.remainingTime = this.totalTime;
     this.isRunning = true;
@@ -73,7 +76,7 @@ export class Level extends Component {
     this.isRunning = false;
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
-      this.timerInterval = 0;
+      this.timerInterval = null;
     }
   }
 
@@ -126,18 +129,21 @@ export class Level extends Component {
    * Start countdown timer
    */
   private startTimer(): void {
+    console.log('[Level] startTimer called');
     this.stopTimer();
+    this.isRunning = true;
     this.timerInterval = setInterval(() => {
       if (!this.isRunning) return;
 
       this.remainingTime--;
+      console.log('[Level] Time remaining:', this.remainingTime);
       this.updateTimerDisplay();
 
       if (this.remainingTime <= 0) {
         this.stopTimer();
         GM.event.emit('timeout');
       }
-    }, 1000) as unknown as number;
+    }, 1000);
   }
 
   /**
@@ -173,7 +179,7 @@ export class Level extends Component {
         // We'll adjust the width based on progress
         const maxWidth = 400;
         const newWidth = maxWidth * progress;
-        uiTransform.setContentSize(newWidth, 35);
+        uiTransform.setContentSize(newWidth, 30);
       }
     }
   }

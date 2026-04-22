@@ -40,21 +40,31 @@ export class Main extends Component {
   level: Level | null = null;
 
   private currentLevel: number = 1;
+  private readonly onShowLevelSelectionHandler = this.showLevelSelection.bind(this);
+  private readonly onStartLevelHandler = this.startLevel.bind(this);
+  private readonly onPauseGameHandler = this.pauseGame.bind(this);
+  private readonly onResumeGameHandler = this.resumeGame.bind(this);
+  private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
+  private readonly onTimeoutHandler = this.onTimeout.bind(this);
+  private readonly onLevelCompleteHandler = this.onLevelComplete.bind(this);
+  private readonly onOpenFailDialogHandler = this.onOpenFailDialog.bind(this);
+  private readonly onAddTimeHandler = this.onAddTime.bind(this);
 
   onLoad(): void {
     // Initialize level repository
     Repo.init();
+    GM.dialog.setParent(this.node);
 
     // Register GM event listeners
-    GM.event.on('showLevelSelection', this.showLevelSelection.bind(this));
-    GM.event.on('startLevel', this.startLevel.bind(this));
-    GM.event.on('pauseGame', this.pauseGame.bind(this));
-    GM.event.on('resumeGame', this.resumeGame.bind(this));
-    GM.event.on('backToLevelSelection', this.showLevelSelection.bind(this));
-    GM.event.on('timeout', this.onTimeout.bind(this));
-    GM.event.on('levelComplete', this.onLevelComplete.bind(this));
-    GM.event.on('openFailDialog', this.onOpenFailDialog.bind(this));
-    GM.event.on('addTime', this.onAddTime.bind(this));
+    GM.event.on('showLevelSelection', this.onShowLevelSelectionHandler);
+    GM.event.on('startLevel', this.onStartLevelHandler);
+    GM.event.on('pauseGame', this.onPauseGameHandler);
+    GM.event.on('resumeGame', this.onResumeGameHandler);
+    GM.event.on('backToLevelSelection', this.onBackToLevelSelectionHandler);
+    GM.event.on('timeout', this.onTimeoutHandler);
+    GM.event.on('levelComplete', this.onLevelCompleteHandler);
+    GM.event.on('openFailDialog', this.onOpenFailDialogHandler);
+    GM.event.on('addTime', this.onAddTimeHandler);
 
     // Default entry: start game view directly
     const storedLevel = Number(window.GM?.data?.getState('currentLevel') ?? 1);
@@ -64,15 +74,15 @@ export class Main extends Component {
 
   onDestroy(): void {
     // Cleanup event listeners
-    GM.event.off('showLevelSelection', this.showLevelSelection);
-    GM.event.off('startLevel', this.startLevel);
-    GM.event.off('pauseGame', this.pauseGame);
-    GM.event.off('resumeGame', this.resumeGame);
-    GM.event.off('backToLevelSelection', this.showLevelSelection);
-    GM.event.off('timeout', this.onTimeout);
-    GM.event.off('levelComplete', this.onLevelComplete);
-    GM.event.off('openFailDialog', this.onOpenFailDialog);
-    GM.event.off('addTime', this.onAddTime);
+    GM.event.off('showLevelSelection', this.onShowLevelSelectionHandler);
+    GM.event.off('startLevel', this.onStartLevelHandler);
+    GM.event.off('pauseGame', this.onPauseGameHandler);
+    GM.event.off('resumeGame', this.onResumeGameHandler);
+    GM.event.off('backToLevelSelection', this.onBackToLevelSelectionHandler);
+    GM.event.off('timeout', this.onTimeoutHandler);
+    GM.event.off('levelComplete', this.onLevelCompleteHandler);
+    GM.event.off('openFailDialog', this.onOpenFailDialogHandler);
+    GM.event.off('addTime', this.onAddTimeHandler);
   }
 
   /**
@@ -117,12 +127,12 @@ export class Main extends Component {
   /**
    * Pause the game
    */
-  private pauseGame(): void {
+  private async pauseGame(): Promise<void> {
     // Pause timer
     GM.event.emit('pauseTimer');
 
     // Open SettingDialog
-    this.openDialog('resources/prefab/SettingDialog');
+    await this.openDialog('prefab/SettingDialog');
   }
 
   /**
@@ -162,24 +172,25 @@ export class Main extends Component {
   /**
    * Handle timeout event - open TimeoutDialog
    */
-  private onTimeout(): void {
+  private async onTimeout(): Promise<void> {
+    await this.openDialog('prefab/TimeoutDialog');
     GM.event.emit('openTimeoutDialog');
-    this.openDialog('resources/prefab/TimeoutDialog');
   }
 
   /**
    * Handle level complete event - open WinDialog
    */
-  private onLevelComplete(): void {
+  private async onLevelComplete(): Promise<void> {
+    this.level?.stopTimer();
+    await this.openDialog('prefab/WinDialog');
     GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel: this.currentLevel + 1 });
-    this.openDialog('resources/prefab/WinDialog');
   }
 
   /**
    * Handle open fail dialog event
    */
-  private onOpenFailDialog(): void {
-    this.openDialog('resources/prefab/FailDialog');
+  private async onOpenFailDialog(): Promise<void> {
+    await this.openDialog('prefab/FailDialog');
   }
 
   /**
@@ -194,11 +205,10 @@ export class Main extends Component {
   /**
    * Open a dialog prefab
    */
-  private openDialog(path: string): void {
-    GM.prefab.instantiate(path, (node: Node) => {
-      if (node) {
-        GM.dialog.open(node);
-      }
-    });
+  private async openDialog(path: string): Promise<void> {
+    const dialogNode = await GM.dialog.open({ path });
+    if (!dialogNode) {
+      throw new Error(`[Main] Failed to open dialog: ${path}`);
+    }
   }
 }

@@ -45,7 +45,8 @@ export class SettingDialog extends Component {
   }
 
   private onReplayClick(): void {
-    GM.event.emit('restartLevel');
+    const currentLevel = window.GM?.data?.getState('currentLevel') ?? 1;
+    GM.event.emit('startLevel', { level: currentLevel });
     this.closeDialog();
   }
 
@@ -165,7 +166,7 @@ export class SettingDialog extends Component {
    * Close this dialog
    */
   private closeDialog(): void {
-    GM.dialog.close(this.node);
+    GM.dialog.close();
   }
 
   /**

@@ -23,17 +23,18 @@ export class WinDialog extends Component {
 
   @property(Node)
   levelLabel: Node | null = null; // Level label node
+  private readonly onOpenDialogHandler = this.onOpenDialog.bind(this);
 
   onLoad(): void {
     this.setupButton(this.backBtn, this.onBackClick.bind(this));
     this.setupButton(this.nextBtn, this.onNextClick.bind(this));
 
     // Register for events
-    GM.event.on('openWinDialog', this.onOpenDialog.bind(this));
+    GM.event.on('openWinDialog', this.onOpenDialogHandler);
   }
 
   onDestroy(): void {
-    GM.event.off('openWinDialog', this.onOpenDialog.bind(this));
+    GM.event.off('openWinDialog', this.onOpenDialogHandler);
   }
 
   /**
@@ -83,7 +84,7 @@ export class WinDialog extends Component {
    * Close this dialog
    */
   private closeDialog(): void {
-    GM.dialog.close(this.node);
+    GM.dialog.close();
   }
 
   /**

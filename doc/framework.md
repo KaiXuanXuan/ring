@@ -32,12 +32,14 @@
 1. `scripts/scene/Main.ts` 监听 GM 事件并切换 `LevelSelection` / `Game` 显隐。
 2. 进入 `Game` 时读取当前关卡 ID。
 3. `Repo` 返回 `LevelConfig`。
-4. `Runtime` 在 `Game/Area` 下按配置坐标创建 `Ring/Buckle/Rock/Bomb` 实体。
-5. `Runtime` 为每个 `Ring` 从 `assets/resources/ring/1~7` 随机分配颜色贴图。
-6. 按住某个 `Ring` 时叠加 `assets/resources/ring/绿圈.png` 作为选中态。
-7. 交互组件只采集输入与状态变化。
-8. 所有业务判定统一调用 `Rules`。
-9. 判定结果回写 `Runtime`，推进关卡状态。
+4. `Main` 启动时必须调用 `GM.dialog.setParent(Main 根节点)`，作为全局弹窗容器。
+5. `Level.initLevel()` 设置初始剩余时间并启动倒计时；`startTimer()` 在创建 interval 前必须恢复 `isRunning = true`。
+6. `Runtime` 在 `Game/Area` 下按配置坐标创建 `Ring/Buckle/Rock/Bomb` 实体。
+7. `Runtime` 为每个 `Ring` 从 `assets/resources/ring/1~7` 随机分配颜色贴图。
+8. 按住某个 `Ring` 时叠加 `assets/resources/ring/绿圈.png` 作为选中态。
+9. 交互组件只采集输入与状态变化。
+10. 所有业务判定统一调用 `Rules`。
+11. 判定结果回写 `Runtime`，推进关卡状态。
 
 ## 约束规则
 - 规则唯一入口：仅 `scripts/game/rules/Rules.ts` 可定义玩法判定。
@@ -46,6 +48,10 @@
 - 颜色资源入口：`Ring` 颜色仅使用 `assets/resources/ring/1~7`。
 - 选中态资源入口：仅使用 `assets/resources/ring/绿圈.png`。
 - 场景事件入口：仅 `scripts/scene/Main.ts` 监听 GM 事件并驱动主界面切换。
+- 弹窗路径规则：`GM.dialog.open({ path })` 的 `path` 必须是 resources 相对路径，例如 `prefab/SettingDialog`，禁止写 `resources/prefab/...`。
+- 弹窗父节点规则：使用 `GM.dialog.open()` 前必须先 `setParent()`，否则直接报错并中断流程。
+- 事件监听规则：`GM.event.on/off` 必须复用同一函数引用，禁止 `on/off` 时重复 `bind(this)`。
+- fail-fast：弹窗加载失败直接抛错，禁止静默吞错或兜底。
 - 禁止兜底：配置错误、引用错误、状态错误直接抛错。
 
 ## 命名规范（简短有力）

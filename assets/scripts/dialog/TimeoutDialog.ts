@@ -59,7 +59,7 @@ export class TimeoutDialog extends Component {
    * Close this dialog
    */
   private closeDialog(): void {
-    GM.dialog.close(this.node);
+    GM.dialog.close();
   }
 
   /**
