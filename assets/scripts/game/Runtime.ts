@@ -84,9 +84,7 @@ export class Runtime extends Component {
     if (!this.state) return;
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return;
-    console.log(`[tryReleaseRing] Checking ring=${ringId}, currentAngle=${ring.currentAngle}`);
     const canRelease = canRingRelease(ring, this.state.rings, this.state.bucklesByRing);
-    console.log(`[tryReleaseRing] ring=${ringId} canRelease=${canRelease}`);
     if (canRelease) {
       this.releaseRing(ringId, isUserTriggered);
     }
@@ -175,8 +173,6 @@ export class Runtime extends Component {
     } else {
       this.releaseQueue.push({ ringId, isUserTriggered });
     }
-
-    console.log(`[releaseRing] Added ${ringId} to release queue (isUserTriggered: ${isUserTriggered})`);
 
     // 处理释放队列
     this.processReleaseQueue();
@@ -269,8 +265,6 @@ export class Runtime extends Component {
   private finishRelease(ringId: string): void {
     if (!this.state) return;
 
-    console.log(`[finishRelease] Finishing release for ${ringId}`);
-
     // 处理炸弹
     for (const [id, bomb] of this.state.bombs) {
       if (shouldBombExplodeOnRelease(bomb, ringId)) {
@@ -300,8 +294,6 @@ export class Runtime extends Component {
 
     // 检查并添加连锁释放的 Ring
     const linkedIds = getLinkedRingIds(ringId, this.state.bucklesByRing);
-    console.log(`[finishRelease] Checking linked rings: ${linkedIds.join(', ')}`);
-
     for (const linkedId of linkedIds) {
       // 检查是否已经在队列中
       if (!this.releaseQueue.some(item => item.ringId === linkedId)) {

@@ -61,18 +61,12 @@ export function canRingRelease(
       const gapStartTolerant = (gapStart - RELEASE_TOLERANCE + 360) % 360;
       const gapEndTolerant = (gapEnd + RELEASE_TOLERANCE) % 360;
 
-      console.log(`[canRingRelease] ring=${ringState.id}, other=${id}, buckle=${buckle.id}, ` +
-                  `buckleAngle=${buckleAngle}, gapStart=${gapStart}, gapEnd=${gapEnd}, ` +
-                  `gapStartTolerant=${gapStartTolerant}, gapEndTolerant=${gapEndTolerant}, ` +
-                  `inRange=${isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant)}`);
-
       if (!isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant)) {
         return false;
       }
     }
   }
 
-  console.log(`[canRingRelease] ring=${ringState.id} CAN RELEASE`);
   return true;
 }
 
