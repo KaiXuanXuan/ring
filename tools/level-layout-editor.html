@@ -120,6 +120,7 @@
     };
 
     const ctx = el.stage.getContext("2d");
+    const FIXED_GAP_SIZE = 45;
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
@@ -130,7 +131,6 @@
       render();
     }
     window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
 
     function worldToCanvas(p) {
       const rect = el.stage.getBoundingClientRect();
@@ -144,7 +144,7 @@
     function getRadius() {
       return RING_PREFAB_BASE_RADIUS * RING_SCALE;
     }
-    const FIXED_GAP_SIZE = 45;
+    resizeCanvas();
 
     function normalize(a) {
       const m = a % 360;
@@ -452,6 +452,19 @@
       return `return ${JSON.stringify(cfg, null, 2)};`;
     }
 
+    function copyTextFallback(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "readonly");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (!ok) throw new Error("浏览器拒绝复制");
+    }
+
     function autoSpread() {
       const r = getRadius();
       const n = Math.max(state.rings.length, 1);
@@ -480,7 +493,13 @@
       if (!guardExportWhenOverlap()) return;
       const text = exportRepoSnippet();
       try {
-        await navigator.clipboard.writeText(text);
+        if (location.protocol === "file:") {
+          copyTextFallback(text);
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          copyTextFallback(text);
+        }
       } catch (err) {
         alert(`复制失败: ${err?.message || String(err)}`);
         return;

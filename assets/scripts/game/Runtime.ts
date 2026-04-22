@@ -22,12 +22,6 @@ export class Runtime extends Component {
   private readonly ringScale: number = 0.5;
   private readonly ringRadius: number = Ring.PREFAB_BASE_RADIUS * 0.5;
 
-  @property
-  ringCenterOffsetX: number = 0;
-
-  @property
-  ringCenterOffsetY: number = 20;
-
   private state: LevelState | null = null;
   private areaNode: Node | null = null;
   private buckleLayer: Node | null = null;
@@ -233,8 +227,8 @@ export class Runtime extends Component {
 
     const ringNode = instantiate(this.ringPrefab);
     ringNode.setPosition(
-      ringState.config.position.x + this.ringCenterOffsetX,
-      ringState.config.position.y + this.ringCenterOffsetY,
+      ringState.config.position.x,
+      ringState.config.position.y,
       0
     );
     ringNode.setScale(this.ringScale, this.ringScale, 1);

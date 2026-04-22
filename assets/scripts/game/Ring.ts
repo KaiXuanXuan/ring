@@ -5,7 +5,7 @@ const { ccclass, property } = _decorator;
 
 @ccclass('Ring')
 export class Ring extends Component {
-  // Ring.prefab 尺寸约 380x359，圆心偏移(0,20)时，基准半径按 180 计算。
+  // Ring.prefab 尺寸约 380x359，基准半径按 180 计算。
   public static readonly PREFAB_BASE_RADIUS: number = 180;
 
   @property
@@ -143,16 +143,14 @@ export class Ring extends Component {
   private isTouchOnNode(event: EventTouch): boolean {
     const pos = event.getUILocation();
     const touchPos = new Vec2(pos.x, pos.y);
-    const worldPos = new Vec3();
-    this.node.getWorldPosition(worldPos);
+    const worldPos = this.node.worldPosition;
     const dx = touchPos.x - worldPos.x;
     const dy = touchPos.y - worldPos.y;
     return Math.sqrt(dx * dx + dy * dy) < this.radius;
   }
 
   private calculateAngleDelta(from: Vec2, to: Vec2): number {
-    const worldPos = new Vec3();
-    this.node.getWorldPosition(worldPos);
+    const worldPos = this.node.worldPosition;
     const vec1 = new Vec2(from.x - worldPos.x, from.y - worldPos.y);
     const vec2 = new Vec2(to.x - worldPos.x, to.y - worldPos.y);
     Vec2.normalize(vec1, vec1);

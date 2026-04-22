@@ -106,7 +106,7 @@ export class Repo {
           "id": "ring4",
           "position": {
             "x": 0,
-            "y": 135
+            "y": 140
           },
           "angle": 0
         }
