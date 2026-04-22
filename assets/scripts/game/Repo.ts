@@ -127,7 +127,8 @@ export class Repo {
         {
           "id": "buckle1",
           "ringId": "ring3",
-          "angle": -90
+          "angle": -90,
+          "linkedRingId": "ring4"
         }
       ],
       "rocks": [],
