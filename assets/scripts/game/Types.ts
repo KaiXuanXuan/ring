@@ -42,6 +42,7 @@ export interface RingState {
   hasRock: boolean;
   hasBomb: boolean;
   isReleased: boolean;
+  isShaking: boolean;
   colorIndex: number;
 }
 

@@ -139,7 +139,12 @@ export class Ring extends Component {
     }
     this.setSelectedVisible(false);
     if (this.runtime) {
-      this.runtime.tryReleaseRing(this.ringId, true); // 用户触发释放
+      // 检查是否处于约束状态，如果是则播放抖动动画
+      if (this.runtime.isRingConstrained(this.ringId)) {
+        this.runtime.playShakeAnimation(this.ringId);
+      } else {
+        this.runtime.tryReleaseRing(this.ringId, true); // 用户触发释放
+      }
     }
   }
 

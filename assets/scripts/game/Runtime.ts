@@ -4,7 +4,7 @@
 
 import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, Sprite, color, UIOpacity, Quat } from 'cc';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
-import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds } from './Rules';
+import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds, isRingConstrained } from './Rules';
 import { Repo } from './Repo';
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
@@ -135,9 +135,92 @@ export class Runtime extends Component {
   canSelectRing(ringId: string): boolean {
     if (!this.state) return false;
     const ring = this.state.rings.get(ringId);
-    if (!ring || ring.isReleased) return false;
+    if (!ring || ring.isReleased || ring.isShaking) return false;
     if (this.releaseQueue.some(item => item.ringId === ringId)) return false;
     return true;
+  }
+
+  isRingConstrained(ringId: string): boolean {
+    if (!this.state) return false;
+    const ring = this.state.rings.get(ringId);
+    if (!ring || ring.isReleased) return false;
+    return isRingConstrained(ring, this.state.rings, this.state.bucklesByRing);
+  }
+
+  playShakeAnimation(ringId: string): void {
+    const ringNode = this.ringNodes.get(ringId);
+    if (!ringNode || !this.state) return;
+
+    const ring = this.state.rings.get(ringId);
+    if (!ring) return;
+
+    // 标记为正在摇晃
+    ring.isShaking = true;
+
+    const buckleComps = this.buckleCompsByRing.get(ringId) || [];
+
+    // 记录原始位置和旋转
+    const originalPos = ringNode.position.clone();
+    const originalRot = ringNode.eulerAngles.clone();
+
+    // 停止之前的动画
+    Tween.stopAllByTarget(ringNode);
+
+    // 抖动动画配置
+    const shakeDuration = 0.1;
+    const shakeAngle = 5;
+    const shakeOffset = 3;
+
+    // 旋转中心（config.position）
+    const center = new Vec3(ring.config.position.x, ring.config.position.y, 0);
+
+    tween(ringNode)
+      .to(shakeDuration, { angle: originalRot.z + shakeAngle, position: new Vec3(originalPos.x + shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z - shakeAngle, position: new Vec3(originalPos.x - shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineInOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z + shakeAngle, position: new Vec3(originalPos.x + shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineInOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z - shakeAngle, position: new Vec3(originalPos.x - shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineInOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z + shakeAngle, position: new Vec3(originalPos.x + shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineInOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z - shakeAngle, position: new Vec3(originalPos.x - shakeOffset, originalPos.y, 0) }, {
+        easing: 'sineInOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .to(shakeDuration, { angle: originalRot.z, position: originalPos }, {
+        easing: 'sineOut',
+        onUpdate: () => this.syncBuckleForShake(ringId, center)
+      })
+      .call(() => {
+        // 动画结束后重新同步 Buckle 位置
+        this.syncBuckleNodes(ringId);
+        // 移除摇晃标记
+        if (ring) ring.isShaking = false;
+      })
+      .start();
+  }
+
+  private syncBuckleForShake(ringId: string, center: Vec3): void {
+    const ringNode = this.ringNodes.get(ringId);
+    if (!ringNode) return;
+    const buckleComps = this.buckleCompsByRing.get(ringId) || [];
+    // 使用Ring节点的实际旋转角度（而不是State中的currentAngle）
+    const currentAngle = ringNode.eulerAngles.z;
+    for (const comp of buckleComps) {
+      comp.syncWithRing(center, currentAngle, this.ringScale);
+    }
   }
 
   explodeBomb(bombId: string): void {
@@ -416,6 +499,7 @@ export class Runtime extends Component {
         hasRock: false,
         hasBomb: false,
         isReleased: false,
+        isShaking: false,
         colorIndex: Math.floor(Math.random() * 7) + 1
       });
     }
