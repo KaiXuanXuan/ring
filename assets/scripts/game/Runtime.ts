@@ -2,7 +2,7 @@
  * Level Runtime Manager
  */
 
-import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, Sprite, color, UIOpacity } from 'cc';
+import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, Sprite, color, UIOpacity, Quat } from 'cc';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds } from './Rules';
 import { Repo } from './Repo';
@@ -197,6 +197,7 @@ export class Runtime extends Component {
    * 1. 放大
    * 2. 缩小
    * 3. 向缺口相反方向移动并消失（透明度下降）
+   * Buckle 临时改为 Ring 子节点来跟随动画
    */
   private playReleaseAnimation(ringId: string): void {
     const ring = this.state?.rings.get(ringId);
@@ -208,8 +209,27 @@ export class Runtime extends Component {
       return;
     }
 
-    // 计算移动方向：
-    // 根据测试结果，使用 corrected 公式
+    // 获取该 Ring 的所有 Buckle 节点
+    const buckleNodes = this.buckleNodesByRing.get(ringId) || [];
+
+    // 将 Buckle 临时改为 Ring 的子节点，使其跟随动画
+    for (const buckleNode of buckleNodes) {
+      // 获取当前的世界位置和旋转
+      const worldPos = buckleNode.getWorldPosition();
+      const worldRot = new Quat();
+      buckleNode.getWorldRotation(worldRot);
+
+      // 改变父节点为 Ring（保持世界位置）
+      buckleNode.setParent(ringNode, true);
+
+      // 为 Buckle 添加 UIOpacity 组件
+      let buckleOpacity = buckleNode.getComponent(UIOpacity);
+      if (!buckleOpacity) {
+        buckleOpacity = buckleNode.addComponent(UIOpacity);
+      }
+    }
+
+    // 计算移动方向
     const moveAngleDeg = ring.currentAngle - 90;
     const moveAngleRad = (moveAngleDeg * Math.PI) / 180;
 
@@ -219,8 +239,7 @@ export class Runtime extends Component {
     const currentScale = ringNode.scale.x;
     const targetScale = currentScale * this.releaseScaleFactor;
 
-    // 播放动画
-    // 获取或添加 UIOpacity 组件
+    // 为 Ring 添加 UIOpacity 组件
     let opacityComp = ringNode.getComponent(UIOpacity);
     if (!opacityComp) {
       opacityComp = ringNode.addComponent(UIOpacity);
@@ -244,7 +263,7 @@ export class Runtime extends Component {
             position: targetPos
           }, {
             onUpdate: (target: Node, ratio: number) => {
-              // 透明度从 currentOpacity 降到 0
+              // 透明度从 currentOpacity 降到 0（Ring 和子节点 Buckle 都会受影响）
               const comp = target.getComponent(UIOpacity);
               if (comp) {
                 comp.opacity = Math.floor(currentOpacity * (1 - ratio));
@@ -272,7 +291,7 @@ export class Runtime extends Component {
       }
     }
 
-    // 销毁节点
+    // 销毁 Ring 节点（Buckle 作为子节点会一起被销毁）
     const ringNode = this.ringNodes.get(ringId);
     if (ringNode) {
       Tween.stopAllByTarget(ringNode);
@@ -280,10 +299,7 @@ export class Runtime extends Component {
       this.ringNodes.delete(ringId);
     }
 
-    const buckleNodes = this.buckleNodesByRing.get(ringId) || [];
-    for (const buckleNode of buckleNodes) {
-      buckleNode.destroy();
-    }
+    // 清理 Buckle 映射（节点已随 Ring 一起销毁）
     this.buckleNodesByRing.delete(ringId);
     this.buckleCompsByRing.delete(ringId);
     this.ringComps.delete(ringId);
