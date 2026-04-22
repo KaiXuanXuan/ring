@@ -338,7 +338,8 @@ export class Runtime extends Component {
 
     // 检查是否所有 Ring 都已释放
     const allReleased = Array.from(this.state.rings.values()).every(ring => ring.isReleased);
-    if (allReleased) {
+    const releaseAnimationsFinished = this.releaseQueue.length === 0 && !this.isProcessingRelease;
+    if (allReleased && releaseAnimationsFinished) {
       // 触发关卡完成事件
       GM.event.emit('levelComplete');
     }
