@@ -11,6 +11,9 @@ import { Buckle } from './Buckle';
 
 const { ccclass, property } = _decorator;
 
+// GM is attached to window after initialization
+declare const GM: any;
+
 @ccclass('Runtime')
 export class Runtime extends Component {
   @property(Prefab)
@@ -322,6 +325,23 @@ export class Runtime extends Component {
 
     // 继续处理队列中的下一个
     this.processReleaseQueue();
+
+    // 检查是否所有 Ring 都已释放（关卡完成）
+    this.checkLevelComplete();
+  }
+
+  /**
+   * 检查关卡是否完成（所有 Ring 都已释放）
+   */
+  private checkLevelComplete(): void {
+    if (!this.state) return;
+
+    // 检查是否所有 Ring 都已释放
+    const allReleased = Array.from(this.state.rings.values()).every(ring => ring.isReleased);
+    if (allReleased) {
+      // 触发关卡完成事件
+      GM.event.emit('levelComplete');
+    }
   }
 
   private createState(config: LevelConfig): LevelState {

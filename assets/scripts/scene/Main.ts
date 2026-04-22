@@ -8,6 +8,7 @@
 import { _decorator, Component, Node } from 'cc';
 import { Repo } from '../game/Repo';
 import { Runtime } from '../game/Runtime';
+import { Level } from '../game/Level';
 
 const { ccclass, property } = _decorator;
 
@@ -35,12 +36,19 @@ export class Main extends Component {
   @property(Runtime)
   runtime: Runtime | null = null;
 
+  @property(Level)
+  level: Level | null = null;
+
   private currentLevel: number = 1;
   private readonly onShowLevelSelection = this.showLevelSelection.bind(this);
   private readonly onStartLevel = this.startLevel.bind(this);
   private readonly onPauseGame = this.pauseGame.bind(this);
   private readonly onResumeGame = this.resumeGame.bind(this);
   private readonly onBackToLevelSelection = this.showLevelSelection.bind(this);
+  private readonly onTimeout = this.onTimeout.bind(this);
+  private readonly onLevelComplete = this.onLevelComplete.bind(this);
+  private readonly onOpenFailDialog = this.onOpenFailDialog.bind(this);
+  private readonly onAddTime = this.onAddTime.bind(this);
 
   onLoad(): void {
     // Initialize level repository
@@ -52,6 +60,10 @@ export class Main extends Component {
     GM.event.on('pauseGame', this.onPauseGame);
     GM.event.on('resumeGame', this.onResumeGame);
     GM.event.on('backToLevelSelection', this.onBackToLevelSelection);
+    GM.event.on('timeout', this.onTimeout);
+    GM.event.on('levelComplete', this.onLevelComplete);
+    GM.event.on('openFailDialog', this.onOpenFailDialog);
+    GM.event.on('addTime', this.onAddTime);
 
     // Default entry: start game view directly
     const storedLevel = Number(window.GM?.data?.getState<number>('currentLevel') ?? 1);
@@ -66,6 +78,10 @@ export class Main extends Component {
     GM.event.off('pauseGame', this.onPauseGame);
     GM.event.off('resumeGame', this.onResumeGame);
     GM.event.off('backToLevelSelection', this.onBackToLevelSelection);
+    GM.event.off('timeout', this.onTimeout);
+    GM.event.off('levelComplete', this.onLevelComplete);
+    GM.event.off('openFailDialog', this.onOpenFailDialog);
+    GM.event.off('addTime', this.onAddTime);
   }
 
   /**
@@ -95,6 +111,11 @@ export class Main extends Component {
 
     // Update level display
     this.updateLevelDisplay(level);
+
+    // Initialize Level component (timer)
+    if (this.level) {
+      this.level.initLevel(level);
+    }
 
     // Load and start the level
     if (this.runtime && this.areaNode) {
@@ -142,5 +163,48 @@ export class Main extends Component {
     if (panel) {
       panel.active = visible;
     }
+  }
+
+  /**
+   * Handle timeout event - open TimeoutDialog
+   */
+  private onTimeout(): void {
+    GM.event.emit('openTimeoutDialog');
+    this.openDialog('resources/prefab/TimeoutDialog');
+  }
+
+  /**
+   * Handle level complete event - open WinDialog
+   */
+  private onLevelComplete(): void {
+    GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel: this.currentLevel + 1 });
+    this.openDialog('resources/prefab/WinDialog');
+  }
+
+  /**
+   * Handle open fail dialog event
+   */
+  private onOpenFailDialog(): void {
+    this.openDialog('resources/prefab/FailDialog');
+  }
+
+  /**
+   * Handle add time event
+   */
+  private onAddTime(data: { seconds: number }): void {
+    if (this.level) {
+      this.level.addTime(data.seconds);
+    }
+  }
+
+  /**
+   * Open a dialog prefab
+   */
+  private openDialog(path: string): void {
+    GM.prefab.instantiate(path, (node: Node) => {
+      if (node) {
+        GM.dialog.open(node);
+      }
+    });
   }
 }
