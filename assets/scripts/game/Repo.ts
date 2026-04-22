@@ -33,14 +33,14 @@ export class Repo {
           "id": "ring1",
           "position": {
             "x": 0,
-            "y": -135
+            "y": -140
           },
           "angle": 180
         },
         {
           "id": "ring2",
           "position": {
-            "x": -135,
+            "x": -140,
             "y": 0
           },
           "angle": 45
@@ -48,7 +48,7 @@ export class Repo {
         {
           "id": "ring3",
           "position": {
-            "x": 135,
+            "x": 140,
             "y": 0
           },
           "angle": -45
@@ -82,14 +82,14 @@ export class Repo {
           "id": "ring1",
           "position": {
             "x": 0,
-            "y": -135
+            "y": -140
           },
           "angle": 180
         },
         {
           "id": "ring2",
           "position": {
-            "x": -135,
+            "x": -140,
             "y": 0
           },
           "angle": 45
@@ -97,7 +97,7 @@ export class Repo {
         {
           "id": "ring3",
           "position": {
-            "x": 135,
+            "x": 140,
             "y": 0
           },
           "angle": -45

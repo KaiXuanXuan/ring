@@ -1,4 +1,4 @@
-import { _decorator, Component, EventTouch, Input, Node, Sprite, SpriteFrame, Vec2, Vec3, input, resources } from 'cc';
+import { _decorator, Component, EventTouch, Input, Mat4, Node, Sprite, SpriteFrame, Vec2, Vec3, input, resources } from 'cc';
 import { Runtime } from './Runtime';
 
 const { ccclass, property } = _decorator;
@@ -7,6 +7,8 @@ const { ccclass, property } = _decorator;
 export class Ring extends Component {
   // Ring.prefab 尺寸约 380x359，基准半径按 180 计算。
   public static readonly PREFAB_BASE_RADIUS: number = 180;
+  // 旋转中心偏移（本地坐标）
+  private static readonly ROTATION_CENTER_OFFSET: Vec3 = new Vec3(0, 15, 0);
 
   @property
   rotationSpeed: number = 1;
@@ -143,14 +145,14 @@ export class Ring extends Component {
   private isTouchOnNode(event: EventTouch): boolean {
     const pos = event.getUILocation();
     const touchPos = new Vec2(pos.x, pos.y);
-    const worldPos = this.node.worldPosition;
+    const worldPos = this.getInteractionCenterWorld();
     const dx = touchPos.x - worldPos.x;
     const dy = touchPos.y - worldPos.y;
-    return Math.sqrt(dx * dx + dy * dy) < this.radius;
+    return dx * dx + dy * dy < this.radius * this.radius;
   }
 
   private calculateAngleDelta(from: Vec2, to: Vec2): number {
-    const worldPos = this.node.worldPosition;
+    const worldPos = this.getInteractionCenterWorld();
     const vec1 = new Vec2(from.x - worldPos.x, from.y - worldPos.y);
     const vec2 = new Vec2(to.x - worldPos.x, to.y - worldPos.y);
     Vec2.normalize(vec1, vec1);
@@ -160,6 +162,14 @@ export class Ring extends Component {
     let angle = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
     if (cross < 0) angle = -angle;
     return angle;
+  }
+
+  private getInteractionCenterWorld(): Vec3 {
+    const wm = new Mat4();
+    this.node.getWorldMatrix(wm);
+    const worldCenter = new Vec3();
+    Vec3.transformMat4(worldCenter, Ring.ROTATION_CENTER_OFFSET, wm);
+    return worldCenter;
   }
 }
 

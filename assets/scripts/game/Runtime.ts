@@ -21,6 +21,8 @@ export class Runtime extends Component {
   // 运行时保持与 Ring.ts 基准一致：prefab 半径 180，缩放 0.5 后实际半径 90。
   private readonly ringScale: number = 0.5;
   private readonly ringRadius: number = Ring.PREFAB_BASE_RADIUS * 0.5;
+  // 旋转中心偏移（与 Ring.ts 中的 ROTATION_CENTER_OFFSET 一致）
+  private readonly ringCenterOffset: Vec3 = new Vec3(0, 15, 0);
 
   private state: LevelState | null = null;
   private areaNode: Node | null = null;
@@ -58,6 +60,8 @@ export class Runtime extends Component {
     const ringNode = this.ringNodes.get(ringId);
     if (ringNode) {
       ringNode.setRotationFromEuler(0, 0, ring.currentAngle);
+      const pos = this.calculateRingPosition(ring.config.position, ring.currentAngle);
+      ringNode.setPosition(pos.x, pos.y, 0);
     }
     this.syncBuckleNodes(ringId);
 
@@ -226,11 +230,8 @@ export class Runtime extends Component {
     }
 
     const ringNode = instantiate(this.ringPrefab);
-    ringNode.setPosition(
-      ringState.config.position.x,
-      ringState.config.position.y,
-      0
-    );
+    const pos = this.calculateRingPosition(ringState.config.position, ringState.currentAngle);
+    ringNode.setPosition(pos.x, pos.y, 0);
     ringNode.setScale(this.ringScale, this.ringScale, 1);
     ringNode.setRotationFromEuler(0, 0, ringState.currentAngle);
     const bucklesRoot = ringNode.getChildByName('Buckles');
@@ -294,11 +295,11 @@ export class Runtime extends Component {
   }
 
   private syncBuckleNodes(ringId: string): void {
-    const ringNode = this.ringNodes.get(ringId);
     const ringState = this.state?.rings.get(ringId);
-    if (!ringNode || !ringState) return;
+    if (!ringState) return;
     const buckleComps = this.buckleCompsByRing.get(ringId) || [];
-    const center = ringNode.position;
+    // 旋转中心就是 config.position
+    const center = new Vec3(ringState.config.position.x, ringState.config.position.y, 0);
 
     for (const comp of buckleComps) {
       comp.syncWithRing(center, ringState.currentAngle, this.ringScale);
@@ -322,6 +323,28 @@ export class Runtime extends Component {
   private ensureBuckleLayerTopmost(): void {
     if (!this.areaNode || !this.buckleLayer) return;
     this.buckleLayer.setSiblingIndex(this.areaNode.children.length - 1);
+  }
+
+  /**
+   * 计算 Ring 节点位置，使其围绕旋转中心 (0, 15) 旋转
+   * @param center 旋转中心（config.position）
+   * @param angleDeg 当前旋转角度（度）
+   * @returns Ring 节点应该设置的位置
+   */
+  private calculateRingPosition(center: { x: number; y: number }, angleDeg: number): { x: number; y: number } {
+    const offsetX = this.ringCenterOffset.x * this.ringScale;
+    const offsetY = this.ringCenterOffset.y * this.ringScale;
+    const angleRad = (angleDeg * Math.PI) / 180;
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    // 旋转后的偏移向量
+    const rotatedOffsetX = offsetX * cos - offsetY * sin;
+    const rotatedOffsetY = offsetX * sin + offsetY * cos;
+    // Ring 节点位置 = 旋转中心 - 旋转后的偏移
+    return {
+      x: center.x - rotatedOffsetX,
+      y: center.y - rotatedOffsetY
+    };
   }
 
 }

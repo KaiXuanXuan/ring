@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(git submodule update:*)",
-      "Bash(git submodule:*)"
+      "Bash(git submodule:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
