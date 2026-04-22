@@ -24,14 +24,10 @@ export class TimeoutDialog extends Component {
   @property(Node)
   closeBtn: Node | null = null; // Close button node
 
-  private readonly onBackClick = this.onBackClick.bind(this);
-  private readonly onGetTimeClick = this.onGetTimeClick.bind(this);
-  private readonly onCloseClick = this.onCloseClick.bind(this);
-
   onLoad(): void {
-    this.setupButton(this.backBtn, this.onBackClick);
-    this.setupButton(this.getTimeBtn, this.onGetTimeClick);
-    this.setupButton(this.closeBtn, this.onCloseClick);
+    this.setupButton(this.backBtn, this.onBackClick.bind(this));
+    this.setupButton(this.getTimeBtn, this.onGetTimeClick.bind(this));
+    this.setupButton(this.closeBtn, this.onCloseClick.bind(this));
   }
 
   /**

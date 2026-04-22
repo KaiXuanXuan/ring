@@ -6,6 +6,7 @@
  */
 
 import { _decorator, Component, Node, Button, Label } from 'cc';
+import { Repo } from '../game/Repo';
 
 const { ccclass, property } = _decorator;
 
@@ -23,20 +24,16 @@ export class WinDialog extends Component {
   @property(Node)
   levelLabel: Node | null = null; // Level label node
 
-  private readonly onBackClick = this.onBackClick.bind(this);
-  private readonly onNextClick = this.onNextClick.bind(this);
-
   onLoad(): void {
-    this.setupButton(this.backBtn, this.onBackClick);
-    this.setupButton(this.nextBtn, this.onNextClick);
+    this.setupButton(this.backBtn, this.onBackClick.bind(this));
+    this.setupButton(this.nextBtn, this.onNextClick.bind(this));
 
     // Register for events
-    this.onOpenDialog = this.onOpenDialog.bind(this);
-    GM.event.on('openWinDialog', this.onOpenDialog);
+    GM.event.on('openWinDialog', this.onOpenDialog.bind(this));
   }
 
   onDestroy(): void {
-    GM.event.off('openWinDialog', this.onOpenDialog);
+    GM.event.off('openWinDialog', this.onOpenDialog.bind(this));
   }
 
   /**
@@ -64,16 +61,15 @@ export class WinDialog extends Component {
    * Handle Next button click - start next level
    */
   private onNextClick(): void {
-    const currentLevel = window.GM?.data?.getState<number>('currentLevel') ?? 1;
+    const currentLevel = window.GM?.data?.getState('currentLevel') ?? 1;
     const nextLevel = currentLevel + 1;
 
     // Check if next level exists
     try {
-      const { Repo } = require('../game/Repo');
       Repo.get(nextLevel);
 
       // Update and start next level
-      window.GM?.data?.setState('currentLevel', nextLevel);
+      window.GM?.data?.setState({ currentLevel: nextLevel });
       GM.event.emit('startLevel', { level: nextLevel });
       this.closeDialog();
     } catch (e) {

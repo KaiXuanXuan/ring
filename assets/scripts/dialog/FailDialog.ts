@@ -20,12 +20,9 @@ export class FailDialog extends Component {
   @property(Node)
   replayBtn: Node | null = null; // Replay button node
 
-  private readonly onBackClick = this.onBackClick.bind(this);
-  private readonly onReplayClick = this.onReplayClick.bind(this);
-
   onLoad(): void {
-    this.setupButton(this.backBtn, this.onBackClick);
-    this.setupButton(this.replayBtn, this.onReplayClick);
+    this.setupButton(this.backBtn, this.onBackClick.bind(this));
+    this.setupButton(this.replayBtn, this.onReplayClick.bind(this));
   }
 
   /**

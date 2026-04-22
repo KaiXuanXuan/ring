@@ -40,44 +40,35 @@ export class Main extends Component {
   level: Level | null = null;
 
   private currentLevel: number = 1;
-  private readonly onShowLevelSelection = this.showLevelSelection.bind(this);
-  private readonly onStartLevel = this.startLevel.bind(this);
-  private readonly onPauseGame = this.pauseGame.bind(this);
-  private readonly onResumeGame = this.resumeGame.bind(this);
-  private readonly onBackToLevelSelection = this.showLevelSelection.bind(this);
-  private readonly onTimeout = this.onTimeout.bind(this);
-  private readonly onLevelComplete = this.onLevelComplete.bind(this);
-  private readonly onOpenFailDialog = this.onOpenFailDialog.bind(this);
-  private readonly onAddTime = this.onAddTime.bind(this);
 
   onLoad(): void {
     // Initialize level repository
     Repo.init();
 
     // Register GM event listeners
-    GM.event.on('showLevelSelection', this.onShowLevelSelection);
-    GM.event.on('startLevel', this.onStartLevel);
-    GM.event.on('pauseGame', this.onPauseGame);
-    GM.event.on('resumeGame', this.onResumeGame);
-    GM.event.on('backToLevelSelection', this.onBackToLevelSelection);
-    GM.event.on('timeout', this.onTimeout);
-    GM.event.on('levelComplete', this.onLevelComplete);
-    GM.event.on('openFailDialog', this.onOpenFailDialog);
-    GM.event.on('addTime', this.onAddTime);
+    GM.event.on('showLevelSelection', this.showLevelSelection.bind(this));
+    GM.event.on('startLevel', this.startLevel.bind(this));
+    GM.event.on('pauseGame', this.pauseGame.bind(this));
+    GM.event.on('resumeGame', this.resumeGame.bind(this));
+    GM.event.on('backToLevelSelection', this.showLevelSelection.bind(this));
+    GM.event.on('timeout', this.onTimeout.bind(this));
+    GM.event.on('levelComplete', this.onLevelComplete.bind(this));
+    GM.event.on('openFailDialog', this.onOpenFailDialog.bind(this));
+    GM.event.on('addTime', this.onAddTime.bind(this));
 
     // Default entry: start game view directly
-    const storedLevel = Number(window.GM?.data?.getState<number>('currentLevel') ?? 1);
+    const storedLevel = Number(window.GM?.data?.getState('currentLevel') ?? 1);
     this.currentLevel = Number.isFinite(storedLevel) && storedLevel > 0 ? storedLevel : 1;
     this.startLevel({ level: this.currentLevel });
   }
 
   onDestroy(): void {
     // Cleanup event listeners
-    GM.event.off('showLevelSelection', this.onShowLevelSelection);
-    GM.event.off('startLevel', this.onStartLevel);
-    GM.event.off('pauseGame', this.onPauseGame);
-    GM.event.off('resumeGame', this.onResumeGame);
-    GM.event.off('backToLevelSelection', this.onBackToLevelSelection);
+    GM.event.off('showLevelSelection', this.showLevelSelection);
+    GM.event.off('startLevel', this.startLevel);
+    GM.event.off('pauseGame', this.pauseGame);
+    GM.event.off('resumeGame', this.resumeGame);
+    GM.event.off('backToLevelSelection', this.showLevelSelection);
     GM.event.off('timeout', this.onTimeout);
     GM.event.off('levelComplete', this.onLevelComplete);
     GM.event.off('openFailDialog', this.onOpenFailDialog);
@@ -127,16 +118,19 @@ export class Main extends Component {
    * Pause the game
    */
   private pauseGame(): void {
-    // Pause game logic
-    // This can be implemented later based on game state management needs
+    // Pause timer
+    GM.event.emit('pauseTimer');
+
+    // Open SettingDialog
+    this.openDialog('resources/prefab/SettingDialog');
   }
 
   /**
    * Resume the game
    */
   private resumeGame(): void {
-    // Resume game logic
-    // This can be implemented later based on game state management needs
+    // Resume timer
+    GM.event.emit('resumeTimer');
   }
 
   /**
