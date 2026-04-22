@@ -69,7 +69,7 @@
       <canvas id="stage"></canvas>
       <div class="hint">
         左键拖拽 Ring 中心移动 | 红色表示与其他 Ring 重叠<br/>
-        Buckle 槽位角度固定：`buckle1=-90` `buckle2=-45` `buckle3=0` `buckle4=45` `buckle5=90`
+        Angle：0°=缺口朝上（逆时针为正）；导出为 Cocos gapAngle（0°=+X，90°=+Y）。槽位：`buckle1=-90` … `buckle5=90`
       </div>
     </div>
   </div>
@@ -81,8 +81,7 @@
     // Ring.prefab 基准半径 180，运行时缩放 0.5 -> 实际布局/判定半径 90
     const RING_PREFAB_BASE_RADIUS = 180;
     const RING_SCALE = 0.5;
-    // 项目约定：gapAngle=0 对应预制体默认缺口朝上
-    const GAP_DRAW_OFFSET = -90;
+    // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 gapAngle = normalize(angle+90) 与 Runtime setGapPolar 一致（0°=+X，90°=+Y）
     // Ring.prefab 中 Buckles/Buckle1..5 的局部坐标（以 Ring 根节点为参考）
     const BUCKLE_LOCAL_POS = {
       buckle1: { x: -250, y: 0 },
@@ -97,9 +96,9 @@
 
     const state = {
       rings: [
-        { id: "ring1", position: { x: -140, y: 0 }, gapAngle: 0, buckles: [] },
-        { id: "ring2", position: { x: 0, y: 0 }, gapAngle: 0, buckles: [] },
-        { id: "ring3", position: { x: 140, y: 0 }, gapAngle: 0, buckles: [] },
+        { id: "ring1", position: { x: -140, y: 0 }, angle: 0, buckles: [] },
+        { id: "ring2", position: { x: 0, y: 0 }, angle: 0, buckles: [] },
+        { id: "ring3", position: { x: 140, y: 0 }, angle: 0, buckles: [] },
       ],
       rocks: [],
       bombs: [],
@@ -186,14 +185,19 @@
       const c = worldToCanvas(getRenderCenter(r));
       const rad = getRadius();
       const gapSize = getGapSize();
-      const gapMid = normalize(r.gapAngle + GAP_DRAW_OFFSET);
-      const start = (gapMid + gapSize / 2) * Math.PI / 180;
-      const end = (gapMid - gapSize / 2) * Math.PI / 180;
+      // 缺口中心方向（世界 y 轴向上、从 +X 逆时针）：编辑器 angle=0 → 90°=朝上
+      const gapMid = normalize(r.angle + 90);
+      // Canvas arc 角沿顺时针递增；世界坐标（与 Buckle / Rules 一致）为 y 向上、逆时针为正 → 映射为取负。
+      // 取负后若仍用 clockwise，会画成短弧（缺口）；须 anticlockwise 才能画原先那道大弧（环身）。
+      const a1 = ((gapMid + gapSize / 2) * Math.PI) / 180;
+      const a2 = ((gapMid - gapSize / 2) * Math.PI) / 180;
+      const start = -a1;
+      const end = -a2;
 
       ctx.lineWidth = 24;
       ctx.strokeStyle = isOverlap ? "#ff5f5f" : color;
       ctx.beginPath();
-      ctx.arc(c.x, c.y, rad, start, end, false);
+      ctx.arc(c.x, c.y, rad, start, end, true);
       ctx.stroke();
 
       ctx.fillStyle = "#ddd";
@@ -204,7 +208,7 @@
       for (const b of r.buckles) {
         const wp = getBuckleWorldPoint(r, b.id);
         const p = worldToCanvas(wp);
-        const rz = b.angle;
+        const rz = b.angle + r.angle;
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate((-rz * Math.PI) / 180); // world y-up -> canvas y-down
@@ -262,7 +266,7 @@
         </div>
         <div class="row"><label>X</label><input data-k="x" type="number" value="${r.position.x}"></div>
         <div class="row"><label>Y</label><input data-k="y" type="number" value="${r.position.y}"></div>
-        <div class="row"><label>GapAngle</label><input data-k="gapAngle" type="number" value="${r.gapAngle}"></div>
+        <div class="row"><label>Angle</label><input data-k="angle" type="number" value="${r.angle}" title="0=缺口朝上，逆时针为正；导出为 gapAngle"></div>
         <div class="small">Buckle（只选择参与判定的槽位，关联 Ring 自动推导）</div>
         <div class="row">
           <select data-k="slot">
@@ -275,7 +279,7 @@
 
       box.querySelector('[data-k="x"]').addEventListener("input", e => { r.position.x = Number(e.target.value) || 0; render(); });
       box.querySelector('[data-k="y"]').addEventListener("input", e => { r.position.y = Number(e.target.value) || 0; render(); });
-      box.querySelector('[data-k="gapAngle"]').addEventListener("input", e => { r.gapAngle = normalize(Number(e.target.value) || 0); render(); });
+      box.querySelector('[data-k="angle"]').addEventListener("input", e => { r.angle = normalize(Number(e.target.value) || 0); render(); });
       box.querySelector('[data-act="del"]').addEventListener("click", () => {
         state.rings = state.rings.filter(x => x.id !== r.id);
         refreshEditors();
@@ -313,14 +317,32 @@
     // Buckle prefab 视觉尺寸约 104x127，运行时 Ring 使用 0.5 缩放后近似尺寸：
     const BUCKLE_RENDER_SIZE = { w: 52, h: 63.5 };
 
+    function rotateYUp(v, deg) {
+      const rad = (deg * Math.PI) / 180;
+      const c = Math.cos(rad);
+      const s = Math.sin(rad);
+      return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+    }
+
     function getBuckleWorldPoint(ring, slotId) {
       const center = getRenderCenter(ring);
       const lp = BUCKLE_LOCAL_POS[slotId];
       if (!lp) return { x: center.x, y: center.y };
-      return {
-        x: center.x + lp.x * RING_SCALE,
-        y: center.y + lp.y * RING_SCALE,
-      };
+      const scaled = { x: lp.x * RING_SCALE, y: lp.y * RING_SCALE };
+      const w = rotateYUp(scaled, ring.angle);
+      return { x: center.x + w.x, y: center.y + w.y };
+    }
+
+    /** 从导入的 ring 恢复编辑器 angle（0=缺口朝上）。优先 gapAngle（与 Runtime 一致），兼容旧字段 currentAngle / angle */
+    function ringAngleFromImported(r) {
+      if (typeof r.gapAngle === "number") {
+        const ca = typeof r.currentAngle === "number" ? r.currentAngle : 0;
+        return normalize(r.gapAngle + ca - 90);
+      }
+      if (typeof r.angle === "number") {
+        return normalize(r.angle);
+      }
+      return 0;
     }
 
     function inferLinkedRingId(sourceRing, slotId) {
@@ -357,7 +379,7 @@
         rings: state.rings.map(r => ({
           id: r.id,
           position: { x: Math.round(r.position.x), y: Math.round(r.position.y) },
-          gapAngle: normalize(r.gapAngle),
+          gapAngle: normalize(r.angle + 90),
           gapSize: getGapSize(),
           buckles: r.buckles.map(b => {
             const linkedRingId = inferLinkedRingId(r, b.id);
@@ -395,7 +417,7 @@
       state.rings.push({
         id: `ring${idx}`,
         position: { x: idx * 40, y: 0 },
-        gapAngle: 0,
+        angle: 0,
         buckles: []
       });
       refreshEditors();
@@ -418,7 +440,7 @@
         state.rings = raw.rings.map(r => ({
           id: r.id,
           position: { x: r.position?.x || 0, y: r.position?.y || 0 },
-          gapAngle: typeof r.gapAngle === "number" ? r.gapAngle : 0,
+          angle: ringAngleFromImported(r),
           buckles: (r.buckles || []).map(b => ({
             id: b.id,
             angle: b.angle ?? SLOT_ANGLE[b.id] ?? 0
