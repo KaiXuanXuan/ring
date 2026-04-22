@@ -6,7 +6,7 @@
  * Also has BGM and SFX toggle switches.
  */
 
-import { _decorator, Component, Node, Button, tween, Vec3, UITransform } from 'cc';
+import { _decorator, Component, Node, Button, tween, Vec3 } from 'cc';
 
 const { ccclass, property } = _decorator;
 
@@ -77,8 +77,6 @@ export class SettingDialog extends Component {
     this.setupButton(this.bgmSwitch, this.onBgmSwitchClick.bind(this));
     this.setupButton(this.sfxSwitch, this.onSfxSwitchClick.bind(this));
 
-    // Pause game when dialog opens
-    GM.event.emit('pauseGame');
   }
 
   start(): void {
@@ -99,7 +97,7 @@ export class SettingDialog extends Component {
     const isBgmOn = GM.data.getState('bgm') ?? true;
     const offNode = this.bgmSwitch.getChildByName('Off');
     const onNode = this.bgmSwitch.getChildByName('On');
-    const pointNode = this.bgmSwitch.getChildByName('Button');
+    const pointNode = this.bgmSwitch.getChildByName('Point');
     this.updateSwitchUI(offNode, onNode, pointNode, isBgmOn);
   }
 
@@ -111,7 +109,7 @@ export class SettingDialog extends Component {
     const isSfxOn = GM.data.getState('sfx') ?? true;
     const offNode = this.sfxSwitch.getChildByName('Off');
     const onNode = this.sfxSwitch.getChildByName('On');
-    const pointNode = this.sfxSwitch.getChildByName('Button');
+    const pointNode = this.sfxSwitch.getChildByName('Point');
     this.updateSwitchUI(offNode, onNode, pointNode, isSfxOn);
   }
 
