@@ -66,4 +66,6 @@ export interface LevelState {
 }
 
 export const FIXED_GAP_SIZE = 45;
+// 释放判定容差（度），放宽判定条件
+export const RELEASE_TOLERANCE = 10;
 

@@ -4,7 +4,7 @@
 
 import { _decorator, Component, Node, Vec3, instantiate, Prefab } from 'cc';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState } from './Types';
-import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease } from './Rules';
+import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds } from './Rules';
 import { Repo } from './Repo';
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
@@ -76,7 +76,10 @@ export class Runtime extends Component {
     if (!this.state) return;
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return;
-    if (canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) {
+    console.log(`[tryReleaseRing] Checking ring=${ringId}, currentAngle=${ring.currentAngle}`);
+    const canRelease = canRingRelease(ring, this.state.rings, this.state.bucklesByRing);
+    console.log(`[tryReleaseRing] ring=${ringId} canRelease=${canRelease}`);
+    if (canRelease) {
       this.releaseRing(ringId);
     }
   }
@@ -159,6 +162,13 @@ export class Runtime extends Component {
     this.buckleNodesByRing.delete(ringId);
     this.buckleCompsByRing.delete(ringId);
     this.ringComps.delete(ringId);
+
+    // 自动释放连接的 Ring（如果满足释放条件）
+    const linkedIds = getLinkedRingIds(ringId, this.state.bucklesByRing);
+    console.log(`[releaseRing] Released ${ringId}, linked rings: ${linkedIds.join(', ')}`);
+    for (const linkedId of linkedIds) {
+      this.tryReleaseRing(linkedId);
+    }
   }
 
   private createState(config: LevelConfig): LevelState {

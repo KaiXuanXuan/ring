@@ -5,7 +5,7 @@
  * Only entry point for rule definitions.
  */
 
-import { RingState, BombState, BuckleConfig, FIXED_GAP_SIZE } from './Types';
+import { RingState, BombState, BuckleConfig, FIXED_GAP_SIZE, RELEASE_TOLERANCE } from './Types';
 
 export function isRingConstrained(
   ringState: RingState,
@@ -50,16 +50,29 @@ export function canRingRelease(
 
     const buckles = bucklesByRing.get(otherRing.id) || [];
     for (const buckle of buckles) {
+      // 只检查连接到要释放 Ring 的 Buckle
+      if (buckle.linkedRingId !== ringState.id) continue;
+
       const buckleAngle = wrapDeg(otherRing.currentAngle + buckle.angle);
       const gapStart = wrapDeg(ringState.currentAngle);
       const gapEnd = (gapStart + FIXED_GAP_SIZE) % 360;
 
-      if (!isAngleInRange(buckleAngle, gapStart, gapEnd)) {
+      // 使用容差放宽判定：Gap 范围扩大容差
+      const gapStartTolerant = (gapStart - RELEASE_TOLERANCE + 360) % 360;
+      const gapEndTolerant = (gapEnd + RELEASE_TOLERANCE) % 360;
+
+      console.log(`[canRingRelease] ring=${ringState.id}, other=${id}, buckle=${buckle.id}, ` +
+                  `buckleAngle=${buckleAngle}, gapStart=${gapStart}, gapEnd=${gapEnd}, ` +
+                  `gapStartTolerant=${gapStartTolerant}, gapEndTolerant=${gapEndTolerant}, ` +
+                  `inRange=${isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant)}`);
+
+      if (!isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant)) {
         return false;
       }
     }
   }
 
+  console.log(`[canRingRelease] ring=${ringState.id} CAN RELEASE`);
   return true;
 }
 
@@ -69,6 +82,35 @@ export function shouldBombExplodeOnRelease(
 ): boolean {
   if (bombState.isExploded) return false;
   return ringId === bombState.config.ringId;
+}
+
+/**
+ * 获取与指定 Ring 通过 Buckle 连接的所有 Ring ID
+ */
+export function getLinkedRingIds(
+  ringId: string,
+  bucklesByRing: Map<string, BuckleConfig[]>
+): string[] {
+  const linkedIds: string[] = [];
+
+  // 查找所有 Ring 上的 Buckle，看哪些连接到了指定 Ring
+  for (const [ownerRingId, buckles] of bucklesByRing) {
+    for (const buckle of buckles) {
+      if (buckle.linkedRingId === ringId) {
+        linkedIds.push(ownerRingId);
+      }
+    }
+  }
+
+  // 查找指定 Ring 上的 Buckle，看它们连接到哪些 Ring
+  const buckles = bucklesByRing.get(ringId) || [];
+  for (const buckle of buckles) {
+    if (buckle.linkedRingId) {
+      linkedIds.push(buckle.linkedRingId);
+    }
+  }
+
+  return linkedIds;
 }
 
 function isAngleInRange(
