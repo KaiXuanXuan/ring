@@ -38,6 +38,29 @@
       },
       {
         "__id__": 70
+      },
+      {
+        "__type__": "a8d4e3c7-8b5a-4f2e-9c1d-3f6a7b9c5e8d",
+        "_name": "",
+        "_objFlags": 0,
+        "__editorExtras__": {},
+        "node": {
+          "__id__": 1
+        },
+        "_enabled": true,
+        "__prefab": {
+          "__id__": 72
+        },
+        "backBtn": {
+          "__id__": 28
+        },
+        "nextBtn": {
+          "__id__": 48
+        },
+        "levelLabel": {
+          "__id__": 17
+        },
+        "_id": "f3c8d4e7-a1b9-4f8c-9d7e-3f6a7b9c5e8f"
       }
     ],
     "_prefab": {
@@ -194,7 +217,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 89.552734375,
-      "height": 50.4
+      "height": 65.52
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -235,7 +258,7 @@
     "_actualFontSize": 52,
     "_fontSize": 52,
     "_fontFamily": "Arial",
-    "_lineHeight": 40,
+    "_lineHeight": 52,
     "_overflow": 0,
     "_enableWrapText": true,
     "_font": null,
