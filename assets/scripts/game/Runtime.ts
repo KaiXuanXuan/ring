@@ -2,8 +2,8 @@
  * Level Runtime Manager
  */
 
-import { _decorator, Component, Node, Vec3, instantiate, Prefab } from 'cc';
-import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState } from './Types';
+import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, Sprite, color, UIOpacity } from 'cc';
+import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds } from './Rules';
 import { Repo } from './Repo';
 import { Ring } from './Ring';
@@ -23,6 +23,10 @@ export class Runtime extends Component {
   private readonly ringRadius: number = Ring.PREFAB_BASE_RADIUS * 0.5;
   // 旋转中心偏移（与 Ring.ts 中的 ROTATION_CENTER_OFFSET 一致）
   private readonly ringCenterOffset: Vec3 = new Vec3(0, 15, 0);
+  // 释放动画配置
+  private readonly releaseAnimationDuration = 0.8; // 动画总时长（秒）
+  private readonly releaseScaleFactor = 1.5; // 放大倍数
+  private readonly releaseMoveDistance = 100; // 移动距离
 
   private state: LevelState | null = null;
   private areaNode: Node | null = null;
@@ -31,6 +35,10 @@ export class Runtime extends Component {
   private ringComps: Map<string, Ring> = new Map();
   private buckleNodesByRing: Map<string, Node[]> = new Map();
   private buckleCompsByRing: Map<string, Buckle[]> = new Map();
+
+  // 释放队列：{ringId, isUserTriggered}
+  private releaseQueue: Array<{ ringId: string; isUserTriggered: boolean }> = [];
+  private isProcessingRelease = false;
 
   loadLevel(level: number, areaNode: Node): void {
     if (!areaNode) {
@@ -66,13 +74,13 @@ export class Runtime extends Component {
     this.syncBuckleNodes(ringId);
 
     if (checkRelease && canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) {
-      this.releaseRing(ringId);
+      this.releaseRing(ringId, true); // 用户拖拽触发的释放
     }
 
     return true;
   }
 
-  tryReleaseRing(ringId: string): void {
+  tryReleaseRing(ringId: string, isUserTriggered: boolean = false): void {
     if (!this.state) return;
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return;
@@ -80,7 +88,7 @@ export class Runtime extends Component {
     const canRelease = canRingRelease(ring, this.state.rings, this.state.bucklesByRing);
     console.log(`[tryReleaseRing] ring=${ringId} canRelease=${canRelease}`);
     if (canRelease) {
-      this.releaseRing(ringId);
+      this.releaseRing(ringId, isUserTriggered);
     }
   }
 
@@ -128,6 +136,12 @@ export class Runtime extends Component {
 
   clear(): void {
     if (!this.areaNode) return;
+
+    // 停止所有动画
+    for (const ringNode of this.ringNodes.values()) {
+      Tween.stopAllByTarget(ringNode);
+    }
+
     this.areaNode.removeAllChildren();
     this.state = null;
     this.buckleLayer = null;
@@ -135,26 +149,143 @@ export class Runtime extends Component {
     this.ringComps.clear();
     this.buckleNodesByRing.clear();
     this.buckleCompsByRing.clear();
+
+    // 清空释放队列
+    this.releaseQueue = [];
+    this.isProcessingRelease = false;
   }
 
-  private releaseRing(ringId: string): void {
+  private releaseRing(ringId: string, isUserTriggered: boolean = false): void {
     if (!this.state) return;
 
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return;
+
+    // 检查是否已经在队列中
+    if (this.releaseQueue.some(item => item.ringId === ringId)) {
+      return;
+    }
+
+    // 标记为已释放，防止重复添加
     ring.isReleased = true;
 
+    // 用户触发的释放优先级更高，添加到队列前面
+    if (isUserTriggered) {
+      this.releaseQueue.unshift({ ringId, isUserTriggered });
+    } else {
+      this.releaseQueue.push({ ringId, isUserTriggered });
+    }
+
+    console.log(`[releaseRing] Added ${ringId} to release queue (isUserTriggered: ${isUserTriggered})`);
+
+    // 处理释放队列
+    this.processReleaseQueue();
+  }
+
+  /**
+   * 处理释放队列，按优先级播放动画
+   */
+  private processReleaseQueue(): void {
+    if (this.isProcessingRelease || this.releaseQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessingRelease = true;
+
+    const { ringId } = this.releaseQueue[0];
+    this.playReleaseAnimation(ringId);
+  }
+
+  /**
+   * 播放 Ring 释放动画
+   * 1. 放大
+   * 2. 缩小
+   * 3. 向缺口相反方向移动并消失（透明度下降）
+   */
+  private playReleaseAnimation(ringId: string): void {
+    const ring = this.state?.rings.get(ringId);
+    const ringNode = this.ringNodes.get(ringId);
+
+    if (!ring || !ringNode) {
+      // 节点不存在，直接完成释放
+      this.finishRelease(ringId);
+      return;
+    }
+
+    // 计算移动方向：
+    // 根据测试结果，使用 corrected 公式
+    const moveAngleDeg = ring.currentAngle - 90;
+    const moveAngleRad = (moveAngleDeg * Math.PI) / 180;
+
+    const moveX = Math.cos(moveAngleRad) * this.releaseMoveDistance;
+    const moveY = Math.sin(moveAngleRad) * this.releaseMoveDistance;
+
+    const currentScale = ringNode.scale.x;
+    const targetScale = currentScale * this.releaseScaleFactor;
+
+    // 播放动画
+    // 获取或添加 UIOpacity 组件
+    let opacityComp = ringNode.getComponent(UIOpacity);
+    if (!opacityComp) {
+      opacityComp = ringNode.addComponent(UIOpacity);
+    }
+    const currentOpacity = opacityComp.opacity;
+
+    tween(ringNode)
+      .to(this.releaseAnimationDuration * 0.3, { scale: new Vec3(targetScale, targetScale, 1) }) // 放大
+      .to(this.releaseAnimationDuration * 0.3, { scale: new Vec3(currentScale, currentScale, 1) }) // 缩小
+      .call(() => {
+        // 开始移动并消失（透明度下降）
+        const currentPos = ringNode.position.clone();
+        const targetPos = new Vec3(
+          currentPos.x + moveX,
+          currentPos.y + moveY,
+          0
+        );
+
+        tween(ringNode)
+          .to(this.releaseAnimationDuration * 0.4, {
+            position: targetPos
+          }, {
+            onUpdate: (target: Node, ratio: number) => {
+              // 透明度从 currentOpacity 降到 0
+              const comp = target.getComponent(UIOpacity);
+              if (comp) {
+                comp.opacity = Math.floor(currentOpacity * (1 - ratio));
+              }
+            }
+          })
+          .call(() => {
+            this.finishRelease(ringId);
+          })
+          .start();
+      })
+      .start();
+  }
+
+  /**
+   * 完成释放，清理资源并触发连锁释放
+   */
+  private finishRelease(ringId: string): void {
+    if (!this.state) return;
+
+    console.log(`[finishRelease] Finishing release for ${ringId}`);
+
+    // 处理炸弹
     for (const [id, bomb] of this.state.bombs) {
       if (shouldBombExplodeOnRelease(bomb, ringId)) {
         this.explodeBomb(id);
       }
     }
 
+    // 销毁节点
     const ringNode = this.ringNodes.get(ringId);
     if (ringNode) {
+      Tween.stopAllByTarget(ringNode);
       ringNode.destroy();
       this.ringNodes.delete(ringId);
     }
+
     const buckleNodes = this.buckleNodesByRing.get(ringId) || [];
     for (const buckleNode of buckleNodes) {
       buckleNode.destroy();
@@ -163,12 +294,26 @@ export class Runtime extends Component {
     this.buckleCompsByRing.delete(ringId);
     this.ringComps.delete(ringId);
 
-    // 自动释放连接的 Ring（如果满足释放条件）
+    // 从队列中移除
+    this.releaseQueue.shift();
+    this.isProcessingRelease = false;
+
+    // 检查并添加连锁释放的 Ring
     const linkedIds = getLinkedRingIds(ringId, this.state.bucklesByRing);
-    console.log(`[releaseRing] Released ${ringId}, linked rings: ${linkedIds.join(', ')}`);
+    console.log(`[finishRelease] Checking linked rings: ${linkedIds.join(', ')}`);
+
     for (const linkedId of linkedIds) {
-      this.tryReleaseRing(linkedId);
+      // 检查是否已经在队列中
+      if (!this.releaseQueue.some(item => item.ringId === linkedId)) {
+        const linkedRing = this.state.rings.get(linkedId);
+        if (linkedRing && !linkedRing.isReleased) {
+          this.tryReleaseRing(linkedId, false); // 连锁释放，不是用户触发
+        }
+      }
     }
+
+    // 继续处理队列中的下一个
+    this.processReleaseQueue();
   }
 
   private createState(config: LevelConfig): LevelState {

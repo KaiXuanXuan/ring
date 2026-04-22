@@ -138,7 +138,7 @@ export class Ring extends Component {
     }
     this.setSelectedVisible(false);
     if (this.runtime) {
-      this.runtime.tryReleaseRing(this.ringId);
+      this.runtime.tryReleaseRing(this.ringId, true); // 用户触发释放
     }
   }
 
