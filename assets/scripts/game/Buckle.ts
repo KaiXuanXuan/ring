@@ -7,11 +7,11 @@ const { ccclass } = _decorator;
 export class Buckle extends Component {
   private static readonly RENDER_PRIORITY = 2000;
   private static readonly SLOT_LOCAL_POS: Record<string, Vec3> = {
-    buckle1: new Vec3(-250, 0, 0),
+    buckle1: new Vec3(-245, 0, 0),
     buckle2: new Vec3(-170, -170, 0),
     buckle3: new Vec3(0, -240, 0),
     buckle4: new Vec3(170, -170, 0),
-    buckle5: new Vec3(250, 0, 0),
+    buckle5: new Vec3(245, 0, 0),
   };
 
   private cfg: BuckleConfig | null = null;

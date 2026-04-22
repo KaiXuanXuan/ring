@@ -107,6 +107,7 @@ export class Ring extends Component {
 
   private onTouchStart(event: EventTouch): void {
     if (Ring.activeDraggingRingId && Ring.activeDraggingRingId !== this.ringId) return;
+    if (this.runtime && !this.runtime.canSelectRing(this.ringId)) return;
     if (!this.isTouchOnNode(event)) return;
     this.isDragging = true;
     Ring.activeDraggingRingId = this.ringId;

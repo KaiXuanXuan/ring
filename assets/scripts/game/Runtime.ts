@@ -93,6 +93,14 @@ export class Runtime extends Component {
     }
   }
 
+  canSelectRing(ringId: string): boolean {
+    if (!this.state) return false;
+    const ring = this.state.rings.get(ringId);
+    if (!ring || ring.isReleased) return false;
+    if (this.releaseQueue.some(item => item.ringId === ringId)) return false;
+    return true;
+  }
+
   explodeBomb(bombId: string): void {
     if (!this.state) return;
 

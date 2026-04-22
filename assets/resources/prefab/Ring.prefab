@@ -84,7 +84,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 3
@@ -220,7 +220,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 9
@@ -356,7 +356,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 15
@@ -572,7 +572,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -250,
+      "x": -245,
       "y": 0,
       "z": 0
     },
@@ -1116,7 +1116,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 250,
+      "x": 245,
       "y": 0,
       "z": 0
     },
@@ -1244,7 +1244,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 389,
-      "height": 359
+      "height": 360
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
