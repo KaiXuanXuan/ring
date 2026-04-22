@@ -120,6 +120,7 @@ export class Main extends Component {
 
     // Load and start the level
     if (this.runtime && this.areaNode) {
+      this.runtime.clear();
       this.runtime.loadLevel(level, this.areaNode);
     }
   }

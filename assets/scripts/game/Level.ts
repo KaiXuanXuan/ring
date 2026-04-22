@@ -91,9 +91,12 @@ export class Level extends Component {
    * Resume timer
    */
   private onResumeTimer(): void {
-    if (this.remainingTime > 0 && this.remainingTime < this.totalTime) {
-      this.isRunning = true;
+    if (this.remainingTime <= 0) return;
+    if (!this.timerInterval) {
+      this.startTimer();
+      return;
     }
+    this.isRunning = true;
   }
 
   /**
