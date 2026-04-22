@@ -35,15 +35,7 @@ export class Repo {
             "x": -110,
             "y": -160
           },
-          "angle": 180,
-          "gapSize": 45,
-          "buckles": [
-            {
-              "id": "buckle2",
-              "angle": -45,
-              "linkedRingId": "ring2"
-            }
-          ]
+          "angle": 180
         },
         {
           "id": "ring2",
@@ -51,9 +43,7 @@ export class Repo {
             "x": 0,
             "y": 0
           },
-          "angle": 0,
-          "gapSize": 45,
-          "buckles": []
+          "angle": 0
         },
         {
           "id": "ring3",
@@ -61,15 +51,21 @@ export class Repo {
             "x": 110,
             "y": -160
           },
-          "angle": 180,
-          "gapSize": 45,
-          "buckles": [
-            {
-              "id": "buckle5",
-              "angle": 90,
-              "linkedRingId": "ring1"
-            }
-          ]
+          "angle": 180
+        }
+      ],
+      "buckles": [
+        {
+          "id": "buckle2",
+          "ringId": "ring1",
+          "angle": -45,
+          "linkedRingId": "ring2"
+        },
+        {
+          "id": "buckle5",
+          "ringId": "ring3",
+          "angle": 90,
+          "linkedRingId": "ring1"
         }
       ],
       "rocks": [],
@@ -85,37 +81,28 @@ export class Repo {
         {
           id: 'ring1',
           position: { x: 0, y: 0 },
-          angle: 20,
-          gapSize: 45,
-          buckles: [
-            { id: 'buckle1', angle: 35, linkedRingId: 'ring2' }
-          ]
+          angle: 20
         },
         {
           id: 'ring2',
           position: { x: 0, y: 0 },
-          angle: 110,
-          gapSize: 45,
-          buckles: [
-            { id: 'buckle2', angle: 210, linkedRingId: 'ring3' }
-          ]
+          angle: 110
         },
         {
           id: 'ring3',
           position: { x: 0, y: 0 },
-          angle: 220,
-          gapSize: 45,
-          buckles: [
-            { id: 'buckle3', angle: 300, linkedRingId: 'ring4' }
-          ]
+          angle: 220
         },
         {
           id: 'ring4',
           position: { x: 0, y: 0 },
-          angle: 310,
-          gapSize: 45,
-          buckles: []
+          angle: 310
         }
+      ],
+      buckles: [
+        { id: 'buckle1', ringId: 'ring1', angle: 35, linkedRingId: 'ring2' },
+        { id: 'buckle2', ringId: 'ring2', angle: 210, linkedRingId: 'ring3' },
+        { id: 'buckle3', ringId: 'ring3', angle: 300, linkedRingId: 'ring4' }
       ],
       rocks: [],
       bombs: []

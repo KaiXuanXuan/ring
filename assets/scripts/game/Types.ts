@@ -6,12 +6,11 @@ export interface RingConfig {
   id: string;
   position: { x: number; y: number };
   angle: number;
-  gapSize: number;
-  buckles: BuckleConfig[];
 }
 
 export interface BuckleConfig {
   id: string;
+  ringId: string;
   angle: number;
   linkedRingId?: string;
 }
@@ -31,6 +30,7 @@ export interface LevelConfig {
   id: number;
   name: string;
   rings: RingConfig[];
+  buckles: BuckleConfig[];
   rocks: RockConfig[];
   bombs: BombConfig[];
 }
@@ -60,7 +60,10 @@ export interface RockState {
 export interface LevelState {
   config: LevelConfig;
   rings: Map<string, RingState>;
+  bucklesByRing: Map<string, BuckleConfig[]>;
   bombs: Map<string, BombState>;
   rocks: Map<string, RockState>;
 }
+
+export const FIXED_GAP_SIZE = 45;
 

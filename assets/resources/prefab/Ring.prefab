@@ -508,7 +508,7 @@
         "__id__": 45
       }
     ],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 51
@@ -1392,7 +1392,6 @@
       "__id__": 61
     },
     "rotationSpeed": 1,
-    "radius": 180,
     "_id": ""
   },
   {

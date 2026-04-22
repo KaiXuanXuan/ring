@@ -41,10 +41,7 @@
       </div>
 
       <h3>全局参数</h3>
-      <div class="row">
-        <label>GapSize</label>
-        <input id="gapSize" type="number" value="45" />
-      </div>
+      <div class="small">GapSize 固定为 45（与运行时一致）</div>
 
       <div class="row">
         <button id="addRingBtn">新增 Ring</button>
@@ -113,7 +110,6 @@
     const el = {
       levelId: document.getElementById("levelId"),
       levelName: document.getElementById("levelName"),
-      gapSize: document.getElementById("gapSize"),
       addRingBtn: document.getElementById("addRingBtn"),
       autoSpreadBtn: document.getElementById("autoSpreadBtn"),
       overlapStatus: document.getElementById("overlapStatus"),
@@ -148,7 +144,7 @@
     function getRadius() {
       return RING_PREFAB_BASE_RADIUS * RING_SCALE;
     }
-    function getGapSize() { return Number(el.gapSize.value) || 45; }
+    const FIXED_GAP_SIZE = 45;
 
     function normalize(a) {
       const m = a % 360;
@@ -204,7 +200,7 @@
       // 视觉 ring 仅向内吃线宽，外边界与实际判定半径对齐（border-box）
       const outerRadius = getRadius();
       const rad = Math.max(1, outerRadius - RING_STROKE_WIDTH * 0.5);
-      const gapSize = getGapSize();
+      const gapSize = FIXED_GAP_SIZE;
       // 缺口中心方向（世界 y 轴向上、从 +X 逆时针）：编辑器 angle=0 → 90°=朝上
       const gapMid = normalize(r.angle + 90);
       // Canvas arc 角沿顺时针递增；世界坐标（与 Buckle / Rules 一致）为 y 向上、逆时针为正 → 映射为取负。
@@ -418,23 +414,27 @@
     }
 
     function exportConfigObject() {
+      const exportedBuckles = [];
+      for (const r of state.rings) {
+        for (const b of r.buckles) {
+          const linkedRingId = inferLinkedRingId(r, b.id);
+          exportedBuckles.push({
+            id: b.id,
+            ringId: r.id,
+            angle: b.angle,
+            ...(linkedRingId ? { linkedRingId } : {})
+          });
+        }
+      }
       return {
         id: Number(el.levelId.value) || 1,
         name: el.levelName.value || `Level ${el.levelId.value || 1}`,
         rings: state.rings.map(r => ({
           id: r.id,
           position: { x: Math.round(r.position.x), y: Math.round(r.position.y) },
-          angle: Math.round(r.angle),
-          gapSize: getGapSize(),
-          buckles: r.buckles.map(b => {
-            const linkedRingId = inferLinkedRingId(r, b.id);
-            return {
-              id: b.id,
-              angle: b.angle,
-              ...(linkedRingId ? { linkedRingId } : {})
-            };
-          })
+          angle: Math.round(r.angle)
         })),
+        buckles: exportedBuckles,
         rocks: state.rocks,
         bombs: state.bombs,
       };

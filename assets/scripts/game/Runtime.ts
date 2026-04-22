@@ -2,11 +2,12 @@
  * Level Runtime Manager
  */
 
-import { _decorator, Component, Node, instantiate, Prefab } from 'cc';
-import { LevelConfig, LevelState, RingState, BombState, RockState } from './Types';
+import { _decorator, Component, Node, Vec3, instantiate, Prefab } from 'cc';
+import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease } from './Rules';
 import { Repo } from './Repo';
 import { Ring } from './Ring';
+import { Buckle } from './Buckle';
 
 const { ccclass, property } = _decorator;
 
@@ -14,6 +15,8 @@ const { ccclass, property } = _decorator;
 export class Runtime extends Component {
   @property(Prefab)
   ringPrefab: Prefab | null = null;
+  @property(Prefab)
+  bucklePrefab: Prefab | null = null;
 
   // 运行时保持与 Ring.ts 基准一致：prefab 半径 180，缩放 0.5 后实际半径 90。
   private readonly ringScale: number = 0.5;
@@ -27,8 +30,11 @@ export class Runtime extends Component {
 
   private state: LevelState | null = null;
   private areaNode: Node | null = null;
+  private buckleLayer: Node | null = null;
   private ringNodes: Map<string, Node> = new Map();
   private ringComps: Map<string, Ring> = new Map();
+  private buckleNodesByRing: Map<string, Node[]> = new Map();
+  private buckleCompsByRing: Map<string, Buckle[]> = new Map();
 
   loadLevel(level: number, areaNode: Node): void {
     if (!areaNode) {
@@ -37,8 +43,12 @@ export class Runtime extends Component {
     if (!this.ringPrefab) {
       throw new Error('Runtime 缺少 ringPrefab 绑定');
     }
+    if (!this.bucklePrefab) {
+      throw new Error('Runtime 缺少 bucklePrefab 绑定');
+    }
     const config = Repo.get(level);
     this.areaNode = areaNode;
+    this.ensureBuckleLayer();
     this.state = this.createState(config);
     this.spawnEntities();
   }
@@ -48,11 +58,16 @@ export class Runtime extends Component {
 
     const ring = this.state.rings.get(ringId);
     if (!ring) return false;
-    if (!canRingRotate(ring, this.state.rings)) return false;
+    if (!canRingRotate(ring, this.state.rings, this.state.bucklesByRing)) return false;
 
     ring.currentAngle = ring.currentAngle + angleDelta;
+    const ringNode = this.ringNodes.get(ringId);
+    if (ringNode) {
+      ringNode.setRotationFromEuler(0, 0, ring.currentAngle);
+    }
+    this.syncBuckleNodes(ringId);
 
-    if (checkRelease && canRingRelease(ring, this.state.rings)) {
+    if (checkRelease && canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) {
       this.releaseRing(ringId);
     }
 
@@ -63,7 +78,7 @@ export class Runtime extends Component {
     if (!this.state) return;
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return;
-    if (canRingRelease(ring, this.state.rings)) {
+    if (canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) {
       this.releaseRing(ringId);
     }
   }
@@ -114,8 +129,11 @@ export class Runtime extends Component {
     if (!this.areaNode) return;
     this.areaNode.removeAllChildren();
     this.state = null;
+    this.buckleLayer = null;
     this.ringNodes.clear();
     this.ringComps.clear();
+    this.buckleNodesByRing.clear();
+    this.buckleCompsByRing.clear();
   }
 
   private releaseRing(ringId: string): void {
@@ -136,11 +154,18 @@ export class Runtime extends Component {
       ringNode.destroy();
       this.ringNodes.delete(ringId);
     }
+    const buckleNodes = this.buckleNodesByRing.get(ringId) || [];
+    for (const buckleNode of buckleNodes) {
+      buckleNode.destroy();
+    }
+    this.buckleNodesByRing.delete(ringId);
+    this.buckleCompsByRing.delete(ringId);
     this.ringComps.delete(ringId);
   }
 
   private createState(config: LevelConfig): LevelState {
     const rings = new Map<string, RingState>();
+    const bucklesByRing = new Map<string, BuckleConfig[]>();
     const rocks = new Map<string, RockState>();
     const bombs = new Map<string, BombState>();
 
@@ -154,6 +179,18 @@ export class Runtime extends Component {
         isReleased: false,
         colorIndex: Math.floor(Math.random() * 7) + 1
       });
+    }
+
+    for (const buckle of config.buckles) {
+      if (!rings.has(buckle.ringId)) {
+        throw new Error(`Buckle 绑定的 ring 不存在: ${buckle.ringId}`);
+      }
+      const list = bucklesByRing.get(buckle.ringId);
+      if (list) {
+        list.push(buckle);
+      } else {
+        bucklesByRing.set(buckle.ringId, [buckle]);
+      }
     }
 
     for (const rockConfig of config.rocks) {
@@ -176,7 +213,7 @@ export class Runtime extends Component {
       if (ring) ring.hasBomb = true;
     }
 
-    return { config, rings, rocks, bombs };
+    return { config, rings, bucklesByRing, rocks, bombs };
   }
 
   private spawnEntities(): void {
@@ -202,6 +239,10 @@ export class Runtime extends Component {
     );
     ringNode.setScale(this.ringScale, this.ringScale, 1);
     ringNode.setRotationFromEuler(0, 0, ringState.currentAngle);
+    const bucklesRoot = ringNode.getChildByName('Buckles');
+    if (bucklesRoot) {
+      bucklesRoot.active = false;
+    }
     ringNode.name = ringState.id;
     this.areaNode.addChild(ringNode);
     this.ringNodes.set(ringState.id, ringNode);
@@ -215,9 +256,10 @@ export class Runtime extends Component {
     ringComp.setup(this, ringState.id, this.ringRadius);
     ringComp.setRingColor(ringState.colorIndex);
     ringComp.setSelectedVisible(false);
-    ringComp.syncBucklesVisible(ringState.config.buckles);
     ringComp.setRockVisible(ringState.hasRock);
     ringComp.setBombVisible(ringState.hasBomb);
+    this.spawnStandaloneBuckles(ringState.id);
+    this.ensureBuckleLayerTopmost();
 
     if (ringState.hasBomb) {
       const bombState = Array.from(this.state!.bombs.values()).find((item) => item.config.ringId === ringState.id);
@@ -226,5 +268,67 @@ export class Runtime extends Component {
       }
     }
   }
+
+  private spawnStandaloneBuckles(ringId: string): void {
+    if (!this.buckleLayer) {
+      throw new Error('Runtime.spawnStandaloneBuckles 缺少 buckleLayer');
+    }
+    if (!this.bucklePrefab) {
+      throw new Error('Runtime.spawnStandaloneBuckles 缺少 bucklePrefab');
+    }
+    const configs = this.state?.bucklesByRing.get(ringId) || [];
+    const buckleNodes: Node[] = [];
+    const buckleComps: Buckle[] = [];
+
+    for (const cfg of configs) {
+      const buckleNode = instantiate(this.bucklePrefab);
+      const buckleComp = buckleNode.getComponent(Buckle);
+      if (!buckleComp) {
+        throw new Error('bucklePrefab 缺少 Buckle 组件');
+      }
+      buckleComp.setup(cfg, this.ringScale);
+      buckleNode.active = true;
+      this.buckleLayer.addChild(buckleNode);
+      buckleNodes.push(buckleNode);
+      buckleComps.push(buckleComp);
+    }
+
+    this.buckleNodesByRing.set(ringId, buckleNodes);
+    this.buckleCompsByRing.set(ringId, buckleComps);
+    this.syncBuckleNodes(ringId);
+    this.ensureBuckleLayerTopmost();
+  }
+
+  private syncBuckleNodes(ringId: string): void {
+    const ringNode = this.ringNodes.get(ringId);
+    const ringState = this.state?.rings.get(ringId);
+    if (!ringNode || !ringState) return;
+    const buckleComps = this.buckleCompsByRing.get(ringId) || [];
+    const center = ringNode.position;
+
+    for (const comp of buckleComps) {
+      comp.syncWithRing(center, ringState.currentAngle, this.ringScale);
+    }
+  }
+
+  private ensureBuckleLayer(): void {
+    if (!this.areaNode) {
+      throw new Error('Runtime.ensureBuckleLayer 缺少 areaNode');
+    }
+    const existed = this.areaNode.getChildByName('BuckleLayer');
+    if (existed) {
+      this.buckleLayer = existed;
+    } else {
+      this.buckleLayer = new Node('BuckleLayer');
+      this.areaNode.addChild(this.buckleLayer);
+    }
+    this.ensureBuckleLayerTopmost();
+  }
+
+  private ensureBuckleLayerTopmost(): void {
+    if (!this.areaNode || !this.buckleLayer) return;
+    this.buckleLayer.setSiblingIndex(this.areaNode.children.length - 1);
+  }
+
 }
 

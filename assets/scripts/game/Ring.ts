@@ -1,6 +1,5 @@
 import { _decorator, Component, EventTouch, Input, Node, Sprite, SpriteFrame, Vec2, Vec3, input, resources } from 'cc';
 import { Runtime } from './Runtime';
-import type { BuckleConfig } from './Types';
 
 const { ccclass, property } = _decorator;
 
@@ -21,7 +20,6 @@ export class Ring extends Component {
   private startAngle: number = 0;
   private bombId: string | null = null;
 
-  private bucklesNode: Node | null = null;
   private bombNode: Node | null = null;
   private selectedNode: Node | null = null;
   private gapNode: Node | null = null;
@@ -82,39 +80,6 @@ export class Ring extends Component {
     }
   }
 
-  syncBucklesVisible(activeBuckles: BuckleConfig[]): void {
-    if (!this.bucklesNode) throw new Error('Ring 缺少 Buckles 节点');
-    const buckleNodes = this.bucklesNode.children;
-    /**
-     * 预制体 Buckles 下固定 5 个 Buckle（按节点名）：
-     * Buckle1 -> -90°
-     * Buckle2 -> -45°
-     * Buckle3 ->   0°
-     * Buckle4 ->  45°
-     * Buckle5 ->  90°
-     *
-     * 这里只控制显隐：显示的 Buckle 参与判定，隐藏的不参与判定。
-     */
-    if (buckleNodes.length < 5) {
-      throw new Error('Buckles 节点下至少需要 5 个 Buckle 子节点');
-    }
-
-    for (const node of buckleNodes) {
-      node.active = false;
-    }
-
-    for (const buckle of activeBuckles) {
-      const match = /(\d+)$/.exec(buckle.id);
-      if (!match) {
-        continue;
-      }
-      const index = Number(match[1]) - 1;
-      if (index >= 0 && index < buckleNodes.length) {
-        buckleNodes[index].active = true;
-      }
-    }
-  }
-
   armBombTimeout(bombId: string, timeoutSec: number): void {
     this.unschedule(this.onBombTimeout);
     this.bombId = bombId;
@@ -130,12 +95,11 @@ export class Ring extends Component {
   };
 
   private cacheNodes(): void {
-    this.bucklesNode = this.node.getChildByName('Buckles');
     this.bombNode = this.node.getChildByName('Bomb');
     this.selectedNode = this.node.getChildByName('Selected');
     this.gapNode = this.node.getChildByName('Gap');
-    if (!this.bucklesNode || !this.bombNode || !this.selectedNode || !this.gapNode) {
-      throw new Error('Ring 预制体缺少子节点: Buckles/Bomb/Selected/Gap');
+    if (!this.bombNode || !this.selectedNode || !this.gapNode) {
+      throw new Error('Ring 预制体缺少子节点: Bomb/Selected/Gap');
     }
   }
 

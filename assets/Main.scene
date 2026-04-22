@@ -1579,6 +1579,10 @@
       "__uuid__": "fe6b1250-7daa-43be-99a4-963ea5299eee",
       "__expectedType__": "cc.Prefab"
     },
+    "bucklePrefab": {
+      "__uuid__": "d857afad-1406-4952-8ad9-689830d98063",
+      "__expectedType__": "cc.Prefab"
+    },
     "ringCenterOffsetX": 0,
     "ringCenterOffsetY": 20,
     "_id": "05OygzBqNKaYaUePoSWj4L"
