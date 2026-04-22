@@ -5,7 +5,7 @@
 export interface RingConfig {
   id: string;
   position: { x: number; y: number };
-  gapAngle: number;
+  angle: number;
   gapSize: number;
   buckles: BuckleConfig[];
 }

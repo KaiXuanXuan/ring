@@ -82,12 +82,6 @@ export class Ring extends Component {
     }
   }
 
-  setGapPolar(radius: number, angleDeg: number): void {
-    if (!this.gapNode) throw new Error('Ring 缺少 Gap 节点');
-    const rad = (angleDeg * Math.PI) / 180;
-    this.gapNode.setPosition(radius * Math.cos(rad), radius * Math.sin(rad), 0);
-  }
-
   syncBucklesVisible(activeBuckles: BuckleConfig[]): void {
     if (!this.bucklesNode) throw new Error('Ring 缺少 Buckles 节点');
     const buckleNodes = this.bucklesNode.children;
@@ -163,7 +157,7 @@ export class Ring extends Component {
     const delta = this.calculateAngleDelta(this.lastTouchPos, currentPos);
     const appliedDelta = delta * this.rotationSpeed;
     if (this.runtime.rotateRing(this.ringId, appliedDelta, false)) {
-      const newAngle = (this.startAngle + appliedDelta) % 360;
+      const newAngle = this.startAngle + appliedDelta;
       this.node.setRotationFromEuler(0, 0, newAngle);
       this.startAngle = newAngle;
     }

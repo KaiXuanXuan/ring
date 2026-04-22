@@ -18,6 +18,8 @@
     .canvas-wrap { position: relative; }
     canvas { width: 100%; height: 100%; display: block; background: #181818; }
     .hint { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 4px; font-size: 12px; }
+    .canvas-hint { position: absolute; left: 8px; top: 8px; background: rgba(0,40,80,0.75); padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #9cf; max-width: min(420px, 90%); line-height: 1.4; pointer-events: none; display: none; }
+    .canvas-hint.visible { display: block; }
     h3 { margin: 12px 0 8px; }
     .small { font-size: 12px; color: #bbb; }
   </style>
@@ -54,22 +56,18 @@
       <h3>Rings</h3>
       <div id="ringList"></div>
 
-      <h3>导入/导出</h3>
+      <h3>导出</h3>
       <div class="row">
-        <button id="exportJsonBtn">导出 JSON</button>
-        <button id="exportRepoBtn">导出 Repo 片段</button>
+        <button id="exportRepoBtn">导出 Repo（自动复制）</button>
       </div>
-      <div class="row">
-        <button id="importBtn">从 JSON 导入</button>
-      </div>
-      <textarea id="ioText" rows="14" placeholder="导出的 JSON / Repo 片段会显示在这里"></textarea>
     </div>
 
     <div class="canvas-wrap">
       <canvas id="stage"></canvas>
+      <div id="canvasHint" class="canvas-hint" aria-live="polite"></div>
       <div class="hint">
-        左键拖拽 Ring 中心移动 | 红色表示与其他 Ring 重叠<br/>
-        Angle：0°=缺口朝上（逆时针为正）；导出为 Cocos gapAngle（0°=+X，90°=+Y）。槽位：`buckle1=-90` … `buckle5=90`
+        左键点选 / 拖拽移动 | 中键拖拽旋转 Angle | 红色表示与其他 Ring 重叠<br/>
+        Angle：0°=缺口朝上（逆时针为正）；导出字段为 `angle`（与 Ring.prefab 默认朝向一致）。槽位：`buckle1=-90` … `buckle5=90`
       </div>
     </div>
   </div>
@@ -81,7 +79,7 @@
     // Ring.prefab 基准半径 180，运行时缩放 0.5 -> 实际布局/判定半径 90
     const RING_PREFAB_BASE_RADIUS = 180;
     const RING_SCALE = 0.5;
-    // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 gapAngle = normalize(angle+90) 与 Runtime setGapPolar 一致（0°=+X，90°=+Y）
+    // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 angle 与 Runtime 根节点 Z 旋转一一对应（不做额外偏移）
     // Ring.prefab 中 Buckles/Buckle1..5 的局部坐标（以 Ring 根节点为参考）
     const BUCKLE_LOCAL_POS = {
       buckle1: { x: -250, y: 0 },
@@ -93,6 +91,9 @@
     // 与 Runtime.ringCenterOffsetX/Y 一致：配置坐标到可视中心的偏移
     const RING_CENTER_OFFSET = { x: 0, y: 20 };
     const SLOT_KEYS = Object.keys(SLOT_ANGLE);
+    // 普通环颜色池（排除红色），红色仅用于重叠警示
+    const RING_COLORS = ["#4ecdc4", "#5b8cff", "#b06bff", "#ffd166", "#3ddc97", "#7bdff2", "#8bc34a"];
+    const RING_STROKE_WIDTH = 24;
 
     const state = {
       rings: [
@@ -105,6 +106,8 @@
       dragRingId: null,
       dragOffset: { x: 0, y: 0 },
       selectedRingId: null,
+      /** @type {{ ringId: string, lastWorld: { x: number, y: number } } | null} */
+      midRotateState: null,
     };
 
     const el = {
@@ -115,11 +118,9 @@
       autoSpreadBtn: document.getElementById("autoSpreadBtn"),
       overlapStatus: document.getElementById("overlapStatus"),
       ringList: document.getElementById("ringList"),
-      exportJsonBtn: document.getElementById("exportJsonBtn"),
       exportRepoBtn: document.getElementById("exportRepoBtn"),
-      importBtn: document.getElementById("importBtn"),
-      ioText: document.getElementById("ioText"),
       stage: document.getElementById("stage"),
+      canvasHint: document.getElementById("canvasHint"),
     };
 
     const ctx = el.stage.getContext("2d");
@@ -160,7 +161,8 @@
       const dx = c1.x - c2.x;
       const dy = c1.y - c2.y;
       const d = Math.sqrt(dx * dx + dy * dy);
-      return d < getRadius() * 1.2;
+      // 任意两个环边缘接触或相交都视为错误重叠
+      return d <= getRadius() * 2;
     }
 
     function getRenderCenter(ring) {
@@ -181,9 +183,27 @@
       return arr;
     }
 
-    function drawRing(r, color, isOverlap) {
+    /** 从环心指向两点的方向角差（度），逆时针为正（世界 y 向上） */
+    function pointerAngleDeltaFromCenter(center, prevWorld, currWorld) {
+      const v1 = { x: prevWorld.x - center.x, y: prevWorld.y - center.y };
+      const v2 = { x: currWorld.x - center.x, y: currWorld.y - center.y };
+      const len1 = Math.hypot(v1.x, v1.y);
+      const len2 = Math.hypot(v2.x, v2.y);
+      if (len1 < 1e-6 || len2 < 1e-6) return 0;
+      const n1 = { x: v1.x / len1, y: v1.y / len1 };
+      const n2 = { x: v2.x / len2, y: v2.y / len2 };
+      const dot = n1.x * n2.x + n1.y * n2.y;
+      const cross = n1.x * n2.y - n1.y * n2.x;
+      let ang = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+      if (cross < 0) ang = -ang;
+      return ang;
+    }
+
+    function drawRing(r, color, isOverlap, isSelected) {
       const c = worldToCanvas(getRenderCenter(r));
-      const rad = getRadius();
+      // 视觉 ring 仅向内吃线宽，外边界与实际判定半径对齐（border-box）
+      const outerRadius = getRadius();
+      const rad = Math.max(1, outerRadius - RING_STROKE_WIDTH * 0.5);
       const gapSize = getGapSize();
       // 缺口中心方向（世界 y 轴向上、从 +X 逆时针）：编辑器 angle=0 → 90°=朝上
       const gapMid = normalize(r.angle + 90);
@@ -194,11 +214,22 @@
       const start = -a1;
       const end = -a2;
 
-      ctx.lineWidth = 24;
+      ctx.lineWidth = RING_STROKE_WIDTH;
       ctx.strokeStyle = isOverlap ? "#ff5f5f" : color;
       ctx.beginPath();
       ctx.arc(c.x, c.y, rad, start, end, true);
       ctx.stroke();
+
+      if (isSelected) {
+        ctx.save();
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(120, 200, 255, 0.95)";
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, rad + 18, 0, Math.PI * 2, false);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       ctx.fillStyle = "#ddd";
       ctx.font = "12px Arial";
@@ -243,9 +274,11 @@
       const pairs = overlapPairs();
       const overlapSet = new Set(pairs.flat());
       state.rings.forEach((r, i) => {
-        const hue = (i * 67) % 360;
-        drawRing(r, `hsl(${hue},70%,60%)`, overlapSet.has(r.id));
+        const color = RING_COLORS[i % RING_COLORS.length];
+        drawRing(r, color, overlapSet.has(r.id), r.id === state.selectedRingId);
       });
+
+      updateCanvasInteractionHint();
 
       if (pairs.length > 0) {
         el.overlapStatus.className = "warn";
@@ -254,6 +287,29 @@
         el.overlapStatus.className = "ok";
         el.overlapStatus.textContent = "无重叠";
       }
+    }
+
+    function updateCanvasInteractionHint() {
+      const box = el.canvasHint;
+      const sid = state.selectedRingId;
+      const ring = sid ? state.rings.find(x => x.id === sid) : null;
+      if (state.midRotateState && ring) {
+        box.textContent = `旋转中 · ${ring.id} · Angle ${Math.round(ring.angle)}°（中键拖拽，松手结束）`;
+        box.className = "canvas-hint visible";
+        return;
+      }
+      if (state.dragRingId && ring && state.dragRingId === sid) {
+        box.textContent = `移动中 · ${ring.id}（左键拖拽）`;
+        box.className = "canvas-hint visible";
+        return;
+      }
+      if (sid && ring) {
+        box.textContent = `已选中 ${ring.id} · 左键拖拽移动 · 中键拖拽旋转 Angle`;
+        box.className = "canvas-hint visible";
+        return;
+      }
+      box.textContent = "";
+      box.className = "canvas-hint";
     }
 
     function makeRingEditor(r) {
@@ -266,7 +322,7 @@
         </div>
         <div class="row"><label>X</label><input data-k="x" type="number" value="${r.position.x}"></div>
         <div class="row"><label>Y</label><input data-k="y" type="number" value="${r.position.y}"></div>
-        <div class="row"><label>Angle</label><input data-k="angle" type="number" value="${r.angle}" title="0=缺口朝上，逆时针为正；导出为 gapAngle"></div>
+        <div class="row"><label>Angle</label><input data-k="angle" type="number" value="${r.angle}" title="0=缺口朝上，逆时针为正；导出为 angle"></div>
         <div class="small">Buckle（只选择参与判定的槽位，关联 Ring 自动推导）</div>
         <div class="row">
           <select data-k="slot">
@@ -279,8 +335,9 @@
 
       box.querySelector('[data-k="x"]').addEventListener("input", e => { r.position.x = Number(e.target.value) || 0; render(); });
       box.querySelector('[data-k="y"]').addEventListener("input", e => { r.position.y = Number(e.target.value) || 0; render(); });
-      box.querySelector('[data-k="angle"]').addEventListener("input", e => { r.angle = normalize(Number(e.target.value) || 0); render(); });
+      box.querySelector('[data-k="angle"]').addEventListener("input", e => { r.angle = Number(e.target.value) || 0; render(); });
       box.querySelector('[data-act="del"]').addEventListener("click", () => {
+        if (state.selectedRingId === r.id) state.selectedRingId = null;
         state.rings = state.rings.filter(x => x.id !== r.id);
         refreshEditors();
         render();
@@ -333,18 +390,6 @@
       return { x: center.x + w.x, y: center.y + w.y };
     }
 
-    /** 从导入的 ring 恢复编辑器 angle（0=缺口朝上）。优先 gapAngle（与 Runtime 一致），兼容旧字段 currentAngle / angle */
-    function ringAngleFromImported(r) {
-      if (typeof r.gapAngle === "number") {
-        const ca = typeof r.currentAngle === "number" ? r.currentAngle : 0;
-        return normalize(r.gapAngle + ca - 90);
-      }
-      if (typeof r.angle === "number") {
-        return normalize(r.angle);
-      }
-      return 0;
-    }
-
     function inferLinkedRingId(sourceRing, slotId) {
       const p = getBuckleWorldPoint(sourceRing, slotId);
       const radius = getRadius();
@@ -379,7 +424,7 @@
         rings: state.rings.map(r => ({
           id: r.id,
           position: { x: Math.round(r.position.x), y: Math.round(r.position.y) },
-          gapAngle: normalize(r.angle + 90),
+          angle: Math.round(r.angle),
           gapSize: getGapSize(),
           buckles: r.buckles.map(b => {
             const linkedRingId = inferLinkedRingId(r, b.id);
@@ -393,6 +438,13 @@
         rocks: state.rocks,
         bombs: state.bombs,
       };
+    }
+
+    function guardExportWhenOverlap() {
+      const pairs = overlapPairs();
+      if (pairs.length === 0) return true;
+      alert(`导出失败：存在环重叠（含边缘接触）\n${pairs.map(p => `${p[0]} <-> ${p[1]}`).join("\n")}`);
+      return false;
     }
 
     function exportRepoSnippet() {
@@ -424,68 +476,107 @@
     });
     el.autoSpreadBtn.addEventListener("click", autoSpread);
 
-    el.exportJsonBtn.addEventListener("click", () => {
-      el.ioText.value = JSON.stringify(exportConfigObject(), null, 2);
-    });
-    el.exportRepoBtn.addEventListener("click", () => {
-      el.ioText.value = exportRepoSnippet();
-    });
-    el.importBtn.addEventListener("click", () => {
+    el.exportRepoBtn.addEventListener("click", async () => {
+      if (!guardExportWhenOverlap()) return;
+      const text = exportRepoSnippet();
       try {
-        const raw = JSON.parse(el.ioText.value);
-        if (!Array.isArray(raw.rings)) throw new Error("缺少 rings");
-        el.levelId.value = raw.id || 1;
-        el.levelName.value = raw.name || `Level ${raw.id || 1}`;
-        if (raw.rings[0]?.gapSize) el.gapSize.value = raw.rings[0].gapSize;
-        state.rings = raw.rings.map(r => ({
-          id: r.id,
-          position: { x: r.position?.x || 0, y: r.position?.y || 0 },
-          angle: ringAngleFromImported(r),
-          buckles: (r.buckles || []).map(b => ({
-            id: b.id,
-            angle: b.angle ?? SLOT_ANGLE[b.id] ?? 0
-          }))
-        }));
-        state.rocks = raw.rocks || [];
-        state.bombs = raw.bombs || [];
-        refreshEditors();
+        await navigator.clipboard.writeText(text);
       } catch (err) {
-        alert(`导入失败: ${err.message}`);
+        alert(`复制失败: ${err?.message || String(err)}`);
+        return;
       }
+      alert("已复制 Repo 片段到剪贴板");
     });
 
-    el.stage.addEventListener("mousedown", (e) => {
-      const rect = el.stage.getBoundingClientRect();
-      const p = canvasToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      const r = getRadius();
+    function pickRingAtWorld(p) {
+      const rad = getRadius();
       for (let i = state.rings.length - 1; i >= 0; i--) {
         const ring = state.rings[i];
         const center = getRenderCenter(ring);
         const dx = p.x - center.x;
         const dy = p.y - center.y;
-        if (Math.sqrt(dx * dx + dy * dy) <= r) {
-          state.dragRingId = ring.id;
-          state.dragOffset.x = center.x - p.x;
-          state.dragOffset.y = center.y - p.y;
-          break;
-        }
+        if (Math.hypot(dx, dy) <= rad) return ring;
       }
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!state.dragRingId) return;
+      return null;
+    }
+
+    el.stage.addEventListener("mousedown", (e) => {
       const rect = el.stage.getBoundingClientRect();
       const p = canvasToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+
+      if (e.button === 1) {
+        e.preventDefault();
+        const ring = pickRingAtWorld(p);
+        if (!ring) return;
+        state.selectedRingId = ring.id;
+        const center = getRenderCenter(ring);
+        state.midRotateState = {
+          ringId: ring.id,
+          lastWorld: { x: p.x, y: p.y },
+        };
+        render();
+        return;
+      }
+
+      if (e.button !== 0) return;
+
+      const ring = pickRingAtWorld(p);
+      if (!ring) {
+        state.selectedRingId = null;
+        render();
+        return;
+      }
+
+      state.selectedRingId = ring.id;
+      const center = getRenderCenter(ring);
+      state.dragRingId = ring.id;
+      state.dragOffset.x = center.x - p.x;
+      state.dragOffset.y = center.y - p.y;
+      render();
+    });
+
+    el.stage.addEventListener("auxclick", (e) => {
+      if (e.button === 1) e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      const rect = el.stage.getBoundingClientRect();
+      const p = canvasToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+
+      if (state.midRotateState) {
+        const ring = state.rings.find(x => x.id === state.midRotateState.ringId);
+        if (!ring) {
+          state.midRotateState = null;
+          render();
+          return;
+        }
+        const center = getRenderCenter(ring);
+        const d = pointerAngleDeltaFromCenter(center, state.midRotateState.lastWorld, p);
+        ring.angle = ring.angle + d;
+        state.midRotateState.lastWorld = { x: p.x, y: p.y };
+        refreshEditors();
+        return;
+      }
+
+      if (!state.dragRingId) return;
       const ring = state.rings.find(x => x.id === state.dragRingId);
       if (!ring) return;
       const newCenterX = p.x + state.dragOffset.x;
       const newCenterY = p.y + state.dragOffset.y;
-      // 反推回配置坐标（导出给 Repo 的 position）
       ring.position.x = Math.round(newCenterX - RING_CENTER_OFFSET.x);
       ring.position.y = Math.round(newCenterY - RING_CENTER_OFFSET.y);
       refreshEditors();
     });
-    window.addEventListener("mouseup", () => {
-      state.dragRingId = null;
+
+    window.addEventListener("mouseup", (e) => {
+      if (e.button === 1 && state.midRotateState) {
+        state.midRotateState = null;
+        render();
+      }
+      if (e.button === 0) {
+        state.dragRingId = null;
+        render();
+      }
     });
 
     refreshEditors();

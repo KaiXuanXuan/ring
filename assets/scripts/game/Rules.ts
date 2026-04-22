@@ -20,8 +20,8 @@ export function isRingConstrained(
     const linkedRing = allRings.get(buckle.linkedRingId);
     if (!linkedRing || linkedRing.isReleased) continue;
 
-    const buckleAngle = (ringState.currentAngle + buckle.angle) % 360;
-    const linkedGapAngle = (linkedRing.currentAngle + linkedRing.config.gapAngle) % 360;
+    const buckleAngle = wrapDeg(ringState.currentAngle + buckle.angle);
+    const linkedGapAngle = wrapDeg(linkedRing.currentAngle);
 
     const angleDiff = Math.abs(buckleAngle - linkedGapAngle);
     if (angleDiff < 10 || angleDiff > 350) {
@@ -53,8 +53,8 @@ export function canRingRelease(
     if (id === ringState.id || otherRing.isReleased) continue;
 
     for (const buckle of otherRing.config.buckles) {
-      const buckleAngle = (otherRing.currentAngle + buckle.angle) % 360;
-      const gapStart = (ringState.currentAngle + ringState.config.gapAngle) % 360;
+      const buckleAngle = wrapDeg(otherRing.currentAngle + buckle.angle);
+      const gapStart = wrapDeg(ringState.currentAngle);
       const gapEnd = (gapStart + ringState.config.gapSize) % 360;
 
       if (!isAngleInRange(buckleAngle, gapStart, gapEnd)) {
@@ -88,5 +88,10 @@ function isAngleInRange(
   } else {
     return normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd;
   }
+}
+
+function wrapDeg(a: number): number {
+  const m = a % 360;
+  return m < 0 ? m + 360 : m;
 }
 

@@ -26,37 +26,54 @@ export class Repo {
 
   private static createLevel1(): LevelConfig {
     return {
-      id: 1,
-      name: 'Level 1',
-      rings: [
+      "id": 1,
+      "name": "Level 1",
+      "rings": [
         {
-          id: 'ring1',
-          position: { x: 100, y: 0 },
-          gapAngle: 0,
-          gapSize: 45,
-          buckles: [
-            { id: 'buckle1', angle: 30, linkedRingId: 'ring2' }
+          "id": "ring1",
+          "position": {
+            "x": -110,
+            "y": -160
+          },
+          "angle": 180,
+          "gapSize": 45,
+          "buckles": [
+            {
+              "id": "buckle2",
+              "angle": -45,
+              "linkedRingId": "ring2"
+            }
           ]
         },
         {
-          id: 'ring2',
-          position: { x: 0, y: 0 },
-          gapAngle: 140,
-          gapSize: 45,
-          buckles: [
-            { id: 'buckle2', angle: 220, linkedRingId: 'ring3' }
-          ]
+          "id": "ring2",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "angle": 0,
+          "gapSize": 45,
+          "buckles": []
         },
         {
-          id: 'ring3',
-          position: { x: 0, y: 0 },
-          gapAngle: 260,
-          gapSize: 45,
-          buckles: []
+          "id": "ring3",
+          "position": {
+            "x": 110,
+            "y": -160
+          },
+          "angle": 180,
+          "gapSize": 45,
+          "buckles": [
+            {
+              "id": "buckle5",
+              "angle": 90,
+              "linkedRingId": "ring1"
+            }
+          ]
         }
       ],
-      rocks: [],
-      bombs: []
+      "rocks": [],
+      "bombs": []
     };
   }
 
@@ -68,7 +85,7 @@ export class Repo {
         {
           id: 'ring1',
           position: { x: 0, y: 0 },
-          gapAngle: 20,
+          angle: 20,
           gapSize: 45,
           buckles: [
             { id: 'buckle1', angle: 35, linkedRingId: 'ring2' }
@@ -77,7 +94,7 @@ export class Repo {
         {
           id: 'ring2',
           position: { x: 0, y: 0 },
-          gapAngle: 110,
+          angle: 110,
           gapSize: 45,
           buckles: [
             { id: 'buckle2', angle: 210, linkedRingId: 'ring3' }
@@ -86,7 +103,7 @@ export class Repo {
         {
           id: 'ring3',
           position: { x: 0, y: 0 },
-          gapAngle: 220,
+          angle: 220,
           gapSize: 45,
           buckles: [
             { id: 'buckle3', angle: 300, linkedRingId: 'ring4' }
@@ -95,7 +112,7 @@ export class Repo {
         {
           id: 'ring4',
           position: { x: 0, y: 0 },
-          gapAngle: 310,
+          angle: 310,
           gapSize: 45,
           buckles: []
         }

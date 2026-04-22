@@ -50,7 +50,7 @@ export class Runtime extends Component {
     if (!ring) return false;
     if (!canRingRotate(ring, this.state.rings)) return false;
 
-    ring.currentAngle = (ring.currentAngle + angleDelta) % 360;
+    ring.currentAngle = ring.currentAngle + angleDelta;
 
     if (checkRelease && canRingRelease(ring, this.state.rings)) {
       this.releaseRing(ringId);
@@ -148,7 +148,7 @@ export class Runtime extends Component {
       rings.set(ringConfig.id, {
         id: ringConfig.id,
         config: ringConfig,
-        currentAngle: 0,
+        currentAngle: ringConfig.angle,
         hasRock: false,
         hasBomb: false,
         isReleased: false,
@@ -201,6 +201,7 @@ export class Runtime extends Component {
       0
     );
     ringNode.setScale(this.ringScale, this.ringScale, 1);
+    ringNode.setRotationFromEuler(0, 0, ringState.currentAngle);
     ringNode.name = ringState.id;
     this.areaNode.addChild(ringNode);
     this.ringNodes.set(ringState.id, ringNode);
@@ -214,7 +215,6 @@ export class Runtime extends Component {
     ringComp.setup(this, ringState.id, this.ringRadius);
     ringComp.setRingColor(ringState.colorIndex);
     ringComp.setSelectedVisible(false);
-    ringComp.setGapPolar(this.ringRadius, ringState.config.gapAngle);
     ringComp.syncBucklesVisible(ringState.config.buckles);
     ringComp.setRockVisible(ringState.hasRock);
     ringComp.setBombVisible(ringState.hasBomb);
