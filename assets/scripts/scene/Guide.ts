@@ -58,25 +58,8 @@ export class Guide extends Component {
   private countdownPausedByGuide = false;
   private firstBombLevel = -1;
   private bombGuideDialogOpening = false;
-
-  private readonly onStartLevelHandler = (data?: { level?: number }) => {
-    const level = Number(data?.level ?? GM?.data?.getState('currentLevel') ?? 1);
-    if (level === 1) {
-      this.pendingLevel1Guide = true;
-      if (this.tipFramesReady) {
-        this.startGuide();
-        this.pendingLevel1Guide = false;
-      }
-    } else {
-      this.pendingLevel1Guide = false;
-      this.stopGuide();
-    }
-    if (level === this.firstBombLevel) {
-      void this.openGuideDialog();
-    } else {
-      this.bombGuideDialogOpening = false;
-      this.resumeCountdown();
-    }
+  private readonly onStartLevelHandler = () => {
+    this.checkLevelGuide();
   };
 
   private readonly onRingReleasedHandler = (data?: { ringId?: string }) => {
@@ -99,6 +82,7 @@ export class Guide extends Component {
     GM.event.on('ringReleased', this.onRingReleasedHandler);
     GM.event.on('guideDialogClosed', this.onGuideDialogClosedHandler);
     input.on(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
+    this.checkLevelGuide();
     this.initTipFrames();
   }
 
@@ -110,12 +94,7 @@ export class Guide extends Component {
       this.tipFrameStep1 = step1;
       this.tipFrameStep2 = step2;
       this.tipFramesReady = true;
-      const level = Number(GM?.data?.getState('currentLevel') ?? 1);
-      this.pendingLevel1Guide = level === 1 || this.pendingLevel1Guide;
-      if (this.pendingLevel1Guide) {
-        this.startGuide();
-        this.pendingLevel1Guide = false;
-      }
+      this.checkLevelGuide();
     }).catch((err: unknown) => {
       throw err instanceof Error ? err : new Error('Guide 文案资源加载失败');
     });
@@ -126,6 +105,27 @@ export class Guide extends Component {
     GM.event.off('ringReleased', this.onRingReleasedHandler);
     GM.event.off('guideDialogClosed', this.onGuideDialogClosedHandler);
     input.off(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
+    this.resumeCountdown();
+  }
+
+  private checkLevelGuide(): void {
+    const level = Number(GM?.data?.getState('currentLevel') ?? 1);
+    if (level === 1) {
+      this.pendingLevel1Guide = true;
+      if (this.tipFramesReady) {
+        this.startGuide();
+        this.pendingLevel1Guide = false;
+      }
+    } else {
+      this.pendingLevel1Guide = false;
+      this.stopGuide();
+    }
+
+    if (level === this.firstBombLevel) {
+      void this.openGuideDialog();
+      return;
+    }
+    this.bombGuideDialogOpening = false;
     this.resumeCountdown();
   }
 
