@@ -1997,7 +1997,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -105,
+      "x": -110,
       "y": -100,
       "z": 0
     },
@@ -2174,7 +2174,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 185,
+      "width": 195,
       "height": 100
     },
     "_anchorPoint": {
@@ -2353,7 +2353,7 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 105,
+      "x": 110,
       "y": -100,
       "z": 0
     },
@@ -2530,7 +2530,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 185,
+      "width": 195,
       "height": 100
     },
     "_anchorPoint": {
@@ -3048,7 +3048,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 400,
+      "width": 420,
       "height": 100
     },
     "_anchorPoint": {
@@ -3208,7 +3208,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 500,
+      "width": 550,
       "height": 650
     },
     "_anchorPoint": {
