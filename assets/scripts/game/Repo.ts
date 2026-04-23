@@ -208,8 +208,8 @@ export class Repo {
 
   private static createLevel4(): LevelConfig {
     return {
-      "id": 1,
-      "name": "Level 1",
+      "id": 4,
+      "name": "Level 4",
       "rings": [
         {
           "id": "ring1",
