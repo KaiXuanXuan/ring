@@ -2,7 +2,7 @@
  * Level Runtime Manager
  */
 
-import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, UIOpacity, Quat, Label } from 'cc';
+import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, UIOpacity, Label } from 'cc';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds, isRingConstrained } from './Rules';
 import { Repo } from './Repo';
@@ -151,6 +151,7 @@ export class Runtime extends Component {
     if (!this.state) return false;
     const ring = this.state.rings.get(ringId);
     if (!ring || ring.isReleased) return false;
+    if (ring.hasRock) return true;
     return isRingConstrained(ring, this.state.rings, this.state.bucklesByRing);
   }
 
@@ -359,11 +360,6 @@ export class Runtime extends Component {
 
     // 将 Buckle 临时改为 Ring 的子节点，使其跟随动画
     for (const buckleNode of buckleNodes) {
-      // 获取当前的世界位置和旋转
-      const worldPos = buckleNode.getWorldPosition();
-      const worldRot = new Quat();
-      buckleNode.getWorldRotation(worldRot);
-
       // 改变父节点为 Ring（保持世界位置）
       buckleNode.setParent(ringNode, true);
 
@@ -574,10 +570,6 @@ export class Runtime extends Component {
     ringNode.setPosition(pos.x, pos.y, 0);
     ringNode.setScale(this.ringScale, this.ringScale, 1);
     ringNode.setRotationFromEuler(0, 0, ringState.currentAngle);
-    const bucklesRoot = ringNode.getChildByName('Buckles');
-    if (bucklesRoot) {
-      bucklesRoot.active = false;
-    }
     ringNode.name = ringState.id;
     this.areaNode.addChild(ringNode);
     this.ringNodes.set(ringState.id, ringNode);
@@ -610,6 +602,7 @@ export class Runtime extends Component {
     const bombNode = instantiate(this.bombPrefab);
     bombNode.name = bombState.id;
     bombNode.setPosition(ring.config.position.x, ring.config.position.y, 0);
+    bombNode.setScale(this.ringScale, this.ringScale, 1);
     this.areaNode.addChild(bombNode);
     bombNode.setSiblingIndex(this.areaNode.children.length - 1);
     const labelNode = bombNode.getChildByName('Label');
