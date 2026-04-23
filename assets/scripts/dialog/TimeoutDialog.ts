@@ -7,6 +7,7 @@
  */
 
 import { _decorator, Component, Node, Button } from 'cc';
+import { AdService } from '../service/AdService';
 
 const { ccclass, property } = _decorator;
 
@@ -42,9 +43,11 @@ export class TimeoutDialog extends Component {
    * Handle GetTime button click - add 60 seconds and resume
    */
   private onGetTimeClick(): void {
-    GM.event.emit('addTime', { seconds: 60 });
-    GM.event.emit('resumeTimer');
-    this.closeDialog();
+    AdService.showInterstitial(() => {
+      GM.event.emit('addTime', { seconds: 60 });
+      GM.event.emit('resumeTimer');
+      this.closeDialog();
+    });
   }
 
   /**

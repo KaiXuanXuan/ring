@@ -9,6 +9,7 @@ import { _decorator, Component, Node } from 'cc';
 import { Repo } from '../game/Repo';
 import { Runtime } from '../game/Runtime';
 import { Level } from '../game/Level';
+import { AdService } from '../service/AdService';
 
 const { ccclass, property } = _decorator;
 
@@ -54,6 +55,7 @@ export class Main extends Component {
   onLoad(): void {
     // Initialize level repository
     Repo.init();
+    AdService.showSplash();
     GM.dialog.setParent(this.node);
 
     // Register GM event listeners
@@ -108,6 +110,7 @@ export class Main extends Component {
   private startLevel(data: { level?: number }): void {
     const level = data?.level ?? this.currentLevel;
     this.currentLevel = level;
+    AdService.reportLvStart(level);
 
     // Switch to game panel
     this.setPanelVisible(this.levelSelectionPanel, false);
@@ -151,7 +154,9 @@ export class Main extends Component {
    * Apply gameplay hint.
    */
   private onHint(): void {
-    this.runtime?.applyHintRelease();
+    AdService.showInterstitial(() => {
+      this.runtime?.applyHintRelease();
+    });
   }
 
   /**
@@ -193,8 +198,11 @@ export class Main extends Component {
    */
   private async onLevelComplete(): Promise<void> {
     this.level?.stopTimer();
-    await this.openDialog('prefab/WinDialog');
-    GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel: this.currentLevel + 1 });
+    AdService.reportLvFinish(this.currentLevel);
+    AdService.showInterstitial(async () => {
+      await this.openDialog('prefab/WinDialog');
+      GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel: this.currentLevel + 1 });
+    });
   }
 
   /**
