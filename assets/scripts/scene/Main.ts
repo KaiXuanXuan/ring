@@ -198,6 +198,10 @@ export class Main extends Component {
    */
   private async onLevelComplete(): Promise<void> {
     this.level?.stopTimer();
+    const unlockedRaw = Number(window.GM?.data?.getState('unlockedLevel') ?? 1);
+    const unlockedLevel = Number.isFinite(unlockedRaw) && unlockedRaw > 0 ? Math.floor(unlockedRaw) : 1;
+    const nextUnlockedLevel = Math.max(unlockedLevel, this.currentLevel + 1);
+    window.GM?.data?.setState({ unlockedLevel: nextUnlockedLevel });
     AdService.reportLvFinish(this.currentLevel);
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
