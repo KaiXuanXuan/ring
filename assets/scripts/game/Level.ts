@@ -30,20 +30,16 @@ export class Level extends Component {
   private isRunning: boolean = false;
   private readonly onOpenTimeoutDialogHandler = this.onOpenTimeoutDialog.bind(this);
   private readonly onOpenWinDialogHandler = this.onOpenWinDialog.bind(this);
-  private readonly onPauseTimerHandler = this.onPauseTimer.bind(this);
-  private readonly onResumeTimerHandler = this.onResumeTimer.bind(this);
-  private readonly onPauseGameCountdownHandler = this.onPauseTimer.bind(this);
-  private readonly onResumeGameCountdownHandler = this.onResumeTimer.bind(this);
+  private readonly onPauseGameHandler = this.onPauseTimer.bind(this);
+  private readonly onResumeGameHandler = this.onResumeTimer.bind(this);
   private readonly onRestartLevelHandler = this.onRestartLevel.bind(this);
 
   onLoad(): void {
     // Register event listeners
     GM.event.on('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
     GM.event.on('openWinDialog', this.onOpenWinDialogHandler);
-    GM.event.on('pauseTimer', this.onPauseTimerHandler);
-    GM.event.on('resumeTimer', this.onResumeTimerHandler);
-    GM.event.on('pauseGameCountdown', this.onPauseGameCountdownHandler);
-    GM.event.on('resumeGameCountdown', this.onResumeGameCountdownHandler);
+    GM.event.on('pauseGame', this.onPauseGameHandler);
+    GM.event.on('resumeGame', this.onResumeGameHandler);
     GM.event.on('restartLevel', this.onRestartLevelHandler);
   }
 
@@ -51,10 +47,8 @@ export class Level extends Component {
     this.stopTimer();
     GM.event.off('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
     GM.event.off('openWinDialog', this.onOpenWinDialogHandler);
-    GM.event.off('pauseTimer', this.onPauseTimerHandler);
-    GM.event.off('resumeTimer', this.onResumeTimerHandler);
-    GM.event.off('pauseGameCountdown', this.onPauseGameCountdownHandler);
-    GM.event.off('resumeGameCountdown', this.onResumeGameCountdownHandler);
+    GM.event.off('pauseGame', this.onPauseGameHandler);
+    GM.event.off('resumeGame', this.onResumeGameHandler);
     GM.event.off('restartLevel', this.onRestartLevelHandler);
   }
 

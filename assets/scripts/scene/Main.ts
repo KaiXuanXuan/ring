@@ -43,8 +43,6 @@ export class Main extends Component {
   private currentLevel: number = 1;
   private readonly onShowLevelSelectionHandler = this.showLevelSelection.bind(this);
   private readonly onStartLevelHandler = this.startLevel.bind(this);
-  private readonly onPauseGameHandler = this.pauseGame.bind(this);
-  private readonly onResumeGameHandler = this.resumeGame.bind(this);
   private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
   private readonly onHintHandler = this.onHint.bind(this);
   private readonly onTimeoutHandler = this.onTimeout.bind(this);
@@ -60,8 +58,6 @@ export class Main extends Component {
     // Register GM event listeners
     GM.event.on('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.on('startLevel', this.onStartLevelHandler);
-    GM.event.on('pauseGame', this.onPauseGameHandler);
-    GM.event.on('resumeGame', this.onResumeGameHandler);
     GM.event.on('hint', this.onHintHandler);
     GM.event.on('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.on('timeout', this.onTimeoutHandler);
@@ -79,8 +75,6 @@ export class Main extends Component {
     // Cleanup event listeners
     GM.event.off('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.off('startLevel', this.onStartLevelHandler);
-    GM.event.off('pauseGame', this.onPauseGameHandler);
-    GM.event.off('resumeGame', this.onResumeGameHandler);
     GM.event.off('hint', this.onHintHandler);
     GM.event.off('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.off('timeout', this.onTimeoutHandler);
@@ -132,24 +126,13 @@ export class Main extends Component {
   }
 
   /**
-   * Pause the game
+   * Pause button entry: pause game and open setting dialog
    */
-  private async pauseGame(): Promise<void> {
-    // Pause timer
-    GM.event.emit('pauseTimer');
-
-    // Open SettingDialog
+  private async openSettingDialog(): Promise<void> {
+    GM.event.emit('pauseGame');
     await this.openDialog('prefab/SettingDialog');
   }
-
-  /**
-   * Resume the game
-   */
-  private resumeGame(): void {
-    // Resume timer
-    GM.event.emit('resumeTimer');
-  }
-
+  
   /**
    * Apply gameplay hint.
    */

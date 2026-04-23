@@ -45,7 +45,7 @@ export class TimeoutDialog extends Component {
   private onGetTimeClick(): void {
     AdService.showInterstitial(() => {
       GM.event.emit('addTime', { seconds: 60 });
-      GM.event.emit('resumeTimer');
+      GM.event.emit('resumeGame');
       this.closeDialog();
     });
   }

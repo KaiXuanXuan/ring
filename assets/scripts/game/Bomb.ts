@@ -14,12 +14,12 @@ export class Bomb extends Component {
   private remainingSeconds: number = 0;
   private ticking = false;
   private isPaused = false;
-  private readonly onPauseGameCountdownHandler = this.onPauseGameCountdown.bind(this);
-  private readonly onResumeGameCountdownHandler = this.onResumeGameCountdown.bind(this);
+  private readonly onPauseGameHandler = this.onPauseGame.bind(this);
+  private readonly onResumeGameHandler = this.onResumeGame.bind(this);
 
   onLoad(): void {
-    GM.event.on('pauseGameCountdown', this.onPauseGameCountdownHandler);
-    GM.event.on('resumeGameCountdown', this.onResumeGameCountdownHandler);
+    GM.event.on('pauseGame', this.onPauseGameHandler);
+    GM.event.on('resumeGame', this.onResumeGameHandler);
   }
 
   setup(runtime: Runtime, bombId: string, timeoutSec: number): void {
@@ -40,8 +40,8 @@ export class Bomb extends Component {
   }
 
   onDestroy(): void {
-    GM.event.off('pauseGameCountdown', this.onPauseGameCountdownHandler);
-    GM.event.off('resumeGameCountdown', this.onResumeGameCountdownHandler);
+    GM.event.off('pauseGame', this.onPauseGameHandler);
+    GM.event.off('resumeGame', this.onResumeGameHandler);
     this.unschedule(this.tick);
     this.ticking = false;
   }
@@ -71,11 +71,11 @@ export class Bomb extends Component {
     this.countdownLabel.string = String(this.remainingSeconds);
   }
 
-  private onPauseGameCountdown(): void {
+  private onPauseGame(): void {
     this.isPaused = true;
   }
 
-  private onResumeGameCountdown(): void {
+  private onResumeGame(): void {
     this.isPaused = false;
   }
 }

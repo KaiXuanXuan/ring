@@ -143,13 +143,13 @@ export class Guide extends Component {
 
   private pauseCountdown(): void {
     if (this.countdownPausedByGuide) return;
-    GM.event.emit('pauseGameCountdown');
+    GM.event.emit('pauseGame');
     this.countdownPausedByGuide = true;
   }
 
   private resumeCountdown(): void {
     if (!this.countdownPausedByGuide) return;
-    GM.event.emit('resumeGameCountdown');
+    GM.event.emit('resumeGame');
     this.countdownPausedByGuide = false;
   }
 
