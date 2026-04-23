@@ -10,6 +10,7 @@ export class Repo {
   static init(): void {
     this.levels.set(1, this.createLevel1());
     this.levels.set(2, this.createLevel2());
+    this.levels.set(3, this.createLevel3());
   }
 
   static get(id: number): LevelConfig {
@@ -75,8 +76,70 @@ export class Repo {
 
   private static createLevel2(): LevelConfig {
     return {
-      "id": 1,
-      "name": "Level 1",
+      "id": 2,
+      "name": "Level 2",
+      "rings": [
+        {
+          "id": "ring1",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "angle": 180
+        },
+        {
+          "id": "ring2",
+          "position": {
+            "x": -200,
+            "y": 0
+          },
+          "angle": 90
+        },
+        {
+          "id": "ring3",
+          "position": {
+            "x": 0,
+            "y": 200
+          },
+          "angle": 0
+        },
+        {
+          "id": "ring4",
+          "position": {
+            "x": 200,
+            "y": 0
+          },
+          "angle": -90
+        }
+      ],
+      "buckles": [
+        {
+          "id": "buckle1",
+          "ringId": "ring1",
+          "angle": -90,
+          "linkedRingId": "ring4"
+        },
+        {
+          "id": "buckle5",
+          "ringId": "ring1",
+          "angle": 90,
+          "linkedRingId": "ring2"
+        },
+        {
+          "id": "buckle3",
+          "ringId": "ring1",
+          "angle": 0,
+          "linkedRingId": "ring3"
+        }
+      ],
+      "rocks": [],
+      "bombs": []
+    };
+  }
+  private static createLevel3(): LevelConfig {
+    return {
+      "id": 3,
+      "name": "Level 3",
       "rings": [
         {
           "id": "ring1",
