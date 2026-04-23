@@ -31,9 +31,8 @@ export class Guide extends Component {
   @property(Prefab)
   guideHandPrefab: Prefab | null = null;
 
-  private readonly highlightPadding = 5;
-  private readonly tipOffsetY = 120;
-  private readonly handOffsetY = 36;
+  private readonly highlightPadding = 3;
+  private readonly tipOffsetY = -300;
   private readonly tipPathStep1 = 'ui/text/所有的锁环需要在 规定的时间内解锁';
   private readonly tipPathStep2 = 'ui/text/旋转锁环使锁环与卡扣 对齐，锁环将被解锁。';
   private readonly ringInteractionCenterOffset = new Vec3(0, 15, 0);
@@ -228,7 +227,7 @@ export class Guide extends Component {
     const rect = this.getWorldRect(target, this.highlightPadding);
     this.applyMaskHole(rect);
     this.placeSpotlight(rect);
-    this.placeGesture(rect.center, clipName);
+    this.placeGesture(rect.center, rect.height, clipName);
     this.placeTip(rect.center, rect.height, tipFrame);
   }
 
@@ -261,7 +260,7 @@ export class Guide extends Component {
     this.spotlight.active = false;
   }
 
-  private placeGesture(center: Vec3, clipName: string): void {
+  private placeGesture(center: Vec3, _targetHeight: number, clipName: string): void {
     if (!this.gestureAnchor || !this.guideHandPrefab) {
       throw new Error('Guide 缺少 gestureAnchor 或 guideHandPrefab');
     }
@@ -269,10 +268,11 @@ export class Guide extends Component {
       this.handNode.destroy();
       this.handNode = null;
     }
+    const local = this.toGuideLocal(center);
+    this.gestureAnchor.setPosition(local.x, local.y, 0);
     const handNode = instantiate(this.guideHandPrefab);
     this.gestureAnchor.addChild(handNode);
-    const local = this.toGuideLocal(center);
-    handNode.setPosition(local.x, local.y - this.handOffsetY, 0);
+    handNode.setPosition(0, 0, 0);
     const anim = handNode.getComponent(Animation);
     if (!anim) {
       throw new Error('GuideHand.prefab 缺少 Animation 组件');
@@ -286,10 +286,10 @@ export class Guide extends Component {
     this.handNode = handNode;
   }
 
-  private placeTip(center: Vec3, targetHeight: number, frame: SpriteFrame): void {
+  private placeTip(center: Vec3, _targetHeight: number, frame: SpriteFrame): void {
     if (!this.tip || !this.tipSprite) throw new Error('Guide Tip 未初始化');
     const local = this.toGuideLocal(center);
-    this.tip.setPosition(local.x, local.y - targetHeight * 0.5 - this.tipOffsetY, 0);
+    this.tip.setPosition(local.x, local.y + this.tipOffsetY, 0);
     this.tipSprite.spriteFrame = frame;
     const tf = this.tip.getComponent(UITransform);
     if (!tf) throw new Error('Guide Tip 缺少 UITransform');
