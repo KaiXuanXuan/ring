@@ -130,8 +130,8 @@ export interface DialogAnimationConfig {
 export interface DialogOpenConfig {
   /** Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog') */
   path: string;
-  /** Parent node for dialog and mask (required) */
-  parent: any; // Node from 'cc'
+  /** Parent node for dialog and mask (optional, defaults to Canvas if not provided) */
+  parent?: any; // Node from 'cc'
   /** Animation configuration (optional) */
   animation?: DialogAnimationConfig;
 }
@@ -157,7 +157,7 @@ export interface DialogModule {
    * Emits 'dialogOpen' event with { node, path } payload on success.
    *
    * @param config.path - Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog')
-   * @param config.parent - Parent node for dialog and mask (required)
+   * @param config.parent - Parent node for dialog and mask (optional, defaults to Canvas if not provided)
    * @param config.animation - Optional animation configuration
    * @param config.animation.enabled - Whether animation is enabled (default: true)
    * @param config.animation.duration - Animation duration in seconds (default: 0.3)

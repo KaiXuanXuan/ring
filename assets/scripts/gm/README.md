@@ -54,7 +54,7 @@ window.GM.audio.init({ audio: 'audio' });
 
 ```typescript
 // 打开弹窗
-window.GM.dialog.open({ path: 'prefabs/ConfirmDialog', parent: this.node });
+window.GM.dialog.open({ path: 'prefabs/ConfirmDialog' });
 
 // 获取状态
 const level = window.GM.data.getState<number>('level');
@@ -212,10 +212,15 @@ export class GameUI extends Component {
   canvas: Node = null;
 
   openConfirm() {
-    // 打开弹窗（必须传入 parent 参数）
+    // 打开弹窗（parent 可选，默认使用 Canvas）
+    window.GM.dialog.open({
+      path: 'prefabs/ConfirmDialog'
+    });
+
+    // 或指定自定义父节点
     window.GM.dialog.open({
       path: 'prefabs/ConfirmDialog',
-      parent: this.node, // 自定义父节点
+      parent: this.node  // 自定义父节点
     });
   }
 
@@ -229,12 +234,12 @@ export class GameUI extends Component {
 **特性**:
 - **动画效果**: 弹窗打开/关闭带有缩放+淡入淡出动画（默认时长 0.3 秒）
 - **无需等待**: 游戏中正常调用 `open()` 和 `close()` 不需要 `await`，动画时间很短
+- **自动获取父节点**: 如果未传入 `parent` 参数，会自动从场景中获取 `Canvas` 节点作为父节点
 - **自定义动画**: 可通过 `animation` 参数控制动画行为：
   ```typescript
   // 禁用动画
   window.GM.dialog.open({
     path: 'prefabs/ConfirmDialog',
-    parent: this.node, // 自定义父节点
     animation: { enabled: false }
   });
 
@@ -245,7 +250,6 @@ export class GameUI extends Component {
   ```
 - **单层模式**: 打开新弹窗时自动关闭已有弹窗
 - **自动遮罩**: 弹窗后自动创建半透明黑色遮罩（50% 透明度）
-- **必需参数**: `open()` 方法必须传入 `parent` 参数
 
 ---
 
@@ -355,7 +359,7 @@ window.GM.audio.setSfxVolume(1);
 
 | 方法 | 参数 | 返回值 |
 |------|------|--------|
-| `open(config)` | `{ path, parent, animation? }` - path 为 Prefab 路径，parent 为必需的父节点，animation 为动画配置 | `Promise<Node \| undefined>` |
+| `open(config)` | `{ path, parent?, animation? }` - path 为 Prefab 路径，parent 可选（默认 Canvas），animation 为动画配置 | `Promise<Node \| undefined>` |
 | `close(config?)` | `{ animation? }` - 可选动画配置（enabled, duration） | `Promise<void>` |
 
 ### AudioModule
@@ -385,7 +389,7 @@ window.GM.audio.setSfxVolume(1);
 
 4. **Prefab 路径**: `path` 参数是相对于 `resources` 目录的路径，不含扩展名
 
-5. **弹窗父节点**: DialogModule 的 `open()` 方法必须传入 `parent` 参数
+5. **弹窗父节点**: DialogModule 的 `open()` 方法中 `parent` 参数可选，未传入时会自动从场景中获取 `Canvas` 节点
 
 6. **音频**: `audio.init()` 须在已有活动场景时调用（否则抛错）；`init({ audio: '...' })` 指定 resources 下子目录（默认 `audio`）；跨场景保留可传 `persistRoot: true`
 

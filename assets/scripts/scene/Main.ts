@@ -56,7 +56,6 @@ export class Main extends Component {
     // Initialize level repository
     Repo.init();
     AdService.showSplash();
-    // Note: setParent is now private, parent must be provided in open()
 
     // Register GM event listeners
     GM.event.on('showLevelSelection', this.onShowLevelSelectionHandler);
@@ -230,7 +229,7 @@ export class Main extends Component {
    * Open a dialog prefab
    */
   private async openDialog(path: string): Promise<void> {
-    const dialogNode = await GM.dialog.open({ path, parent: this.node });
+    const dialogNode = await GM.dialog.open({ path });
     if (!dialogNode) {
       throw new Error(`[Main] Failed to open dialog: ${path}`);
     }

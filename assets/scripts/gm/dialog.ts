@@ -3,7 +3,7 @@
  * Provides single-layer dialog management with auto-masking.
  */
 
-import { Node, UITransform, Color, Sprite, Widget, SpriteFrame, Texture2D, BlockInputEvents, UIOpacity, tween, Tween, Vec3 } from 'cc';
+import { Node, UITransform, Color, Sprite, Widget, SpriteFrame, Texture2D, BlockInputEvents, UIOpacity, tween, Tween, Vec3, director } from 'cc';
 import type { DialogModule as IDialogModule, EventModule, PrefabModule, DialogOpenConfig, DialogCloseConfig } from './types';
 
 /**
@@ -68,14 +68,14 @@ export class DialogModule implements IDialogModule {
    * Emits 'dialogOpen' event with { node, path } payload on success.
    *
    * @param config.path - Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog')
-   * @param config.parent - Parent node for dialog and mask (required)
+   * @param config.parent - Parent node for dialog and mask (optional, defaults to Canvas if not provided)
    * @param config.animation - Optional animation configuration
    * @param config.animation.enabled - Whether animation is enabled (default: true)
    * @param config.animation.duration - Animation duration in seconds (default: 0.3)
    * @returns Promise resolving to the dialog Node, or undefined on failure
    */
   async open(config: DialogOpenConfig): Promise<Node | undefined> {
-    const { path, parent, animation: animConfig } = config;
+    const { path, parent: configParent, animation: animConfig } = config;
 
     // Validate path
     if (!path) {
@@ -83,10 +83,18 @@ export class DialogModule implements IDialogModule {
       return undefined;
     }
 
-    // Validate parent (required)
+    // Get parent from config or auto-resolve from scene
+    let parent = configParent;
     if (!parent) {
-      console.error('[DialogModule] Parent is required. Provide parent in config.');
-      return undefined;
+      // Try to get Canvas from current scene
+      const scene = director.getScene();
+      if (scene) {
+        parent = scene.getChildByName('Canvas');
+      }
+      if (!parent) {
+        console.error('[DialogModule] Parent is required. Provide parent in config or ensure Canvas exists in scene.');
+        return undefined;
+      }
     }
 
     // Store parent for future use (single-layer behavior)
