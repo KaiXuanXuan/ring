@@ -2,12 +2,13 @@
  * Level Runtime Manager
  */
 
-import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, Sprite, color, UIOpacity, Quat } from 'cc';
+import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, UIOpacity, Quat, Label } from 'cc';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds, isRingConstrained } from './Rules';
 import { Repo } from './Repo';
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
+import { Bomb } from './Bomb';
 
 const { ccclass, property } = _decorator;
 
@@ -20,6 +21,8 @@ export class Runtime extends Component {
   ringPrefab: Prefab | null = null;
   @property(Prefab)
   bucklePrefab: Prefab | null = null;
+  @property(Prefab)
+  bombPrefab: Prefab | null = null;
 
   // 运行时保持与 Ring.ts 基准一致：prefab 半径 180，缩放 0.5 后实际半径 90。
   private readonly ringScale: number = 0.5;
@@ -38,6 +41,7 @@ export class Runtime extends Component {
   private ringComps: Map<string, Ring> = new Map();
   private buckleNodesByRing: Map<string, Node[]> = new Map();
   private buckleCompsByRing: Map<string, Buckle[]> = new Map();
+  private bombNodes: Map<string, Node> = new Map();
 
   // 释放队列：{ringId, isUserTriggered}
   private releaseQueue: Array<{ ringId: string; isUserTriggered: boolean }> = [];
@@ -52,6 +56,9 @@ export class Runtime extends Component {
     }
     if (!this.bucklePrefab) {
       throw new Error('Runtime 缺少 bucklePrefab 绑定');
+    }
+    if (!this.bombPrefab) {
+      throw new Error('Runtime 缺少 bombPrefab 绑定');
     }
     const config = Repo.get(level);
     this.areaNode = areaNode;
@@ -236,8 +243,11 @@ export class Runtime extends Component {
       this.destroyRock(id);
     }
 
-    const hostRingComp = this.ringComps.get(bomb.config.ringId);
-    hostRingComp?.setBombVisible(false);
+    const ring = this.state.rings.get(bomb.config.ringId);
+    if (ring) {
+      ring.hasBomb = false;
+    }
+    this.destroyBombNode(bombId);
   }
 
   handleBombTimeout(bombId: string): void {
@@ -249,6 +259,7 @@ export class Runtime extends Component {
     if (ring) {
       ring.hasBomb = false;
     }
+    this.destroyBombNode(bombId);
   }
 
   destroyRock(rockId: string): void {
@@ -280,6 +291,7 @@ export class Runtime extends Component {
     this.ringComps.clear();
     this.buckleNodesByRing.clear();
     this.buckleCompsByRing.clear();
+    this.bombNodes.clear();
 
     // 清空释放队列
     this.releaseQueue = [];
@@ -544,6 +556,9 @@ export class Runtime extends Component {
     for (const ringState of this.state.rings.values()) {
       if (!ringState.isReleased) this.spawnRing(ringState);
     }
+    for (const bombState of this.state.bombs.values()) {
+      if (!bombState.isExploded) this.spawnBomb(bombState);
+    }
   }
 
   private spawnRing(ringState: RingState): void {
@@ -577,16 +592,38 @@ export class Runtime extends Component {
     ringComp.setRingColor(ringState.colorIndex);
     ringComp.setSelectedVisible(false);
     ringComp.setRockVisible(ringState.hasRock);
-    ringComp.setBombVisible(ringState.hasBomb);
     this.spawnStandaloneBuckles(ringState.id);
     this.ensureBuckleLayerTopmost();
+  }
 
-    if (ringState.hasBomb) {
-      const bombState = Array.from(this.state!.bombs.values()).find((item) => item.config.ringId === ringState.id);
-      if (bombState) {
-        ringComp.armBombTimeout(bombState.id, bombState.config.countdown ?? 30);
-      }
+  private spawnBomb(bombState: BombState): void {
+    if (!this.areaNode) {
+      throw new Error('Runtime.spawnBomb 缺少 areaNode');
     }
+    if (!this.bombPrefab) {
+      throw new Error('Runtime.spawnBomb 缺少 bombPrefab');
+    }
+    const ring = this.state?.rings.get(bombState.config.ringId);
+    if (!ring || ring.isReleased) {
+      throw new Error(`Bomb 绑定 ring 不存在或已释放: ${bombState.config.ringId}`);
+    }
+    const bombNode = instantiate(this.bombPrefab);
+    bombNode.name = bombState.id;
+    bombNode.setPosition(ring.config.position.x, ring.config.position.y, 0);
+    this.areaNode.addChild(bombNode);
+    bombNode.setSiblingIndex(this.areaNode.children.length - 1);
+    const labelNode = bombNode.getChildByName('Label');
+    if (!labelNode) {
+      throw new Error('Bomb prefab 缺少 Label 子节点');
+    }
+    const labelComp = labelNode.getComponent(Label);
+    if (!labelComp) {
+      throw new Error('Bomb prefab 的 Label 子节点缺少 Label 组件');
+    }
+    const bombComp = bombNode.getComponent(Bomb) || bombNode.addComponent(Bomb);
+    bombComp.countdownLabel = labelComp;
+    bombComp.setup(this, bombState.id, bombState.config.countdown ?? 30);
+    this.bombNodes.set(bombState.id, bombNode);
   }
 
   private spawnStandaloneBuckles(ringId: string): void {
@@ -648,6 +685,14 @@ export class Runtime extends Component {
   private ensureBuckleLayerTopmost(): void {
     if (!this.areaNode || !this.buckleLayer) return;
     this.buckleLayer.setSiblingIndex(this.areaNode.children.length - 1);
+  }
+
+  private destroyBombNode(bombId: string): void {
+    const bombNode = this.bombNodes.get(bombId);
+    this.bombNodes.delete(bombId);
+    if (bombNode && bombNode.isValid) {
+      bombNode.destroy();
+    }
   }
 
   /**

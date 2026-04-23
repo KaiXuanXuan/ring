@@ -20,9 +20,7 @@ export class Ring extends Component {
   private isDragging: boolean = false;
   private lastTouchPos: Vec2 = new Vec2();
   private startAngle: number = 0;
-  private bombId: string | null = null;
 
-  private bombNode: Node | null = null;
   private selectedNode: Node | null = null;
   private gapNode: Node | null = null;
   private static activeDraggingRingId: string | null = null;
@@ -40,7 +38,6 @@ export class Ring extends Component {
     input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
     input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
     input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    this.unschedule(this.onBombTimeout);
     if (Ring.activeDraggingRingId === this.ringId) {
       Ring.activeDraggingRingId = null;
     }
@@ -73,35 +70,11 @@ export class Ring extends Component {
     this.gapNode.active = visible;
   }
 
-  setBombVisible(visible: boolean): void {
-    if (!this.bombNode) throw new Error('Ring 缺少 Bomb 节点');
-    this.bombNode.active = visible;
-    if (!visible) {
-      this.unschedule(this.onBombTimeout);
-      this.bombId = null;
-    }
-  }
-
-  armBombTimeout(bombId: string, timeoutSec: number): void {
-    this.unschedule(this.onBombTimeout);
-    this.bombId = bombId;
-    this.scheduleOnce(this.onBombTimeout, timeoutSec);
-  }
-
-  private onBombTimeout = (): void => {
-    if (!this.runtime || !this.bombId) return;
-    const bombId = this.bombId;
-    this.bombId = null;
-    this.setBombVisible(false);
-    this.runtime.handleBombTimeout(bombId);
-  };
-
   private cacheNodes(): void {
-    this.bombNode = this.node.getChildByName('Bomb');
     this.selectedNode = this.node.getChildByName('Selected');
     this.gapNode = this.node.getChildByName('Gap');
-    if (!this.bombNode || !this.selectedNode || !this.gapNode) {
-      throw new Error('Ring 预制体缺少子节点: Bomb/Selected/Gap');
+    if (!this.selectedNode || !this.gapNode) {
+      throw new Error('Ring 预制体缺少子节点: Selected/Gap');
     }
   }
 
