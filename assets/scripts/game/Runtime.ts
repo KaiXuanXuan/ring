@@ -17,6 +17,8 @@ declare const GM: any;
 
 @ccclass('Runtime')
 export class Runtime extends Component {
+  private static readonly RING_COLOR_LIST = [1, 2, 3, 4, 5, 6, 7] as const;
+
   @property(Prefab)
   ringPrefab: Prefab | null = null;
   @property(Prefab)
@@ -499,6 +501,8 @@ export class Runtime extends Component {
     const bucklesByRing = new Map<string, BuckleConfig[]>();
     const rocks = new Map<string, RockState>();
     const bombs = new Map<string, BombState>();
+    const colorIndexes = this.generateRingColorIndexes(config.rings.length);
+    let colorCursor = 0;
 
     for (const ringConfig of config.rings) {
       rings.set(ringConfig.id, {
@@ -509,7 +513,7 @@ export class Runtime extends Component {
         hasBomb: false,
         isReleased: false,
         isShaking: false,
-        colorIndex: Math.floor(Math.random() * 7) + 1
+        colorIndex: colorIndexes[colorCursor++]
       });
     }
 
@@ -546,6 +550,27 @@ export class Runtime extends Component {
     }
 
     return { config, rings, bucklesByRing, rocks, bombs };
+  }
+
+  private generateRingColorIndexes(ringCount: number): number[] {
+    if (ringCount < 0) {
+      throw new Error(`ringCount 非法: ${ringCount}`);
+    }
+    const result: number[] = [];
+    while (result.length < ringCount) {
+      const colorPool = [...Runtime.RING_COLOR_LIST];
+      this.shuffleInPlace(colorPool);
+      const remain = ringCount - result.length;
+      result.push(...colorPool.slice(0, remain));
+    }
+    return result;
+  }
+
+  private shuffleInPlace<T>(array: T[]): void {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
   }
 
   private spawnEntities(): void {
