@@ -32,6 +32,8 @@ export class Level extends Component {
   private readonly onOpenWinDialogHandler = this.onOpenWinDialog.bind(this);
   private readonly onPauseTimerHandler = this.onPauseTimer.bind(this);
   private readonly onResumeTimerHandler = this.onResumeTimer.bind(this);
+  private readonly onPauseGameCountdownHandler = this.onPauseTimer.bind(this);
+  private readonly onResumeGameCountdownHandler = this.onResumeTimer.bind(this);
   private readonly onRestartLevelHandler = this.onRestartLevel.bind(this);
 
   onLoad(): void {
@@ -40,6 +42,8 @@ export class Level extends Component {
     GM.event.on('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.on('pauseTimer', this.onPauseTimerHandler);
     GM.event.on('resumeTimer', this.onResumeTimerHandler);
+    GM.event.on('pauseGameCountdown', this.onPauseGameCountdownHandler);
+    GM.event.on('resumeGameCountdown', this.onResumeGameCountdownHandler);
     GM.event.on('restartLevel', this.onRestartLevelHandler);
   }
 
@@ -49,6 +53,8 @@ export class Level extends Component {
     GM.event.off('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.off('pauseTimer', this.onPauseTimerHandler);
     GM.event.off('resumeTimer', this.onResumeTimerHandler);
+    GM.event.off('pauseGameCountdown', this.onPauseGameCountdownHandler);
+    GM.event.off('resumeGameCountdown', this.onResumeGameCountdownHandler);
     GM.event.off('restartLevel', this.onRestartLevelHandler);
   }
 

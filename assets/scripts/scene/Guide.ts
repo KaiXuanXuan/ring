@@ -31,7 +31,6 @@ export class Guide extends Component {
   @property(Prefab)
   guideHandPrefab: Prefab | null = null;
 
-  private readonly highlightPadding = 3;
   private readonly tipOffsetY = -300;
   private readonly tipPathStep1 = 'ui/text/所有的锁环需要在 规定的时间内解锁';
   private readonly tipPathStep2 = 'ui/text/旋转锁环使锁环与卡扣 对齐，锁环将被解锁。';
@@ -54,6 +53,7 @@ export class Guide extends Component {
   private tipFrameStep2: SpriteFrame | null = null;
   private tipFramesReady = false;
   private pendingLevel1Guide = false;
+  private countdownPausedByGuide = false;
 
   private readonly onStartLevelHandler = (data?: { level?: number }) => {
     const level = Number(data?.level ?? GM?.data?.getState('currentLevel') ?? 1);
@@ -181,6 +181,10 @@ export class Guide extends Component {
     }
     this.step = 1;
     this.node.active = true;
+    if (!this.countdownPausedByGuide) {
+      GM.event.emit('pauseGameCountdown');
+      this.countdownPausedByGuide = true;
+    }
     this.enterStep1();
   }
 
@@ -195,6 +199,10 @@ export class Guide extends Component {
   private stopGuide(): void {
     this.step = 0;
     this.node.active = false;
+    if (this.countdownPausedByGuide) {
+      GM.event.emit('resumeGameCountdown');
+      this.countdownPausedByGuide = false;
+    }
     if (this.handNode && this.handNode.isValid) {
       this.handNode.destroy();
       this.handNode = null;
@@ -224,21 +232,21 @@ export class Guide extends Component {
     if (!this.spotlight || !this.gestureAnchor || !this.tip || !this.tipSprite) {
       throw new Error('Guide 节点初始化不完整');
     }
-    const rect = this.getWorldRect(target, this.highlightPadding);
+    const rect = this.getWorldRect(target);
     this.applyMaskHole(rect);
     this.placeSpotlight(rect);
     this.placeGesture(rect.center, rect.height, clipName);
     this.placeTip(rect.center, rect.height, tipFrame);
   }
 
-  private getWorldRect(target: Node, padding: number): { center: Vec3; width: number; height: number } {
+  private getWorldRect(target: Node): { center: Vec3; width: number; height: number } {
     const tf = target.getComponent(UITransform);
     if (!tf) {
       throw new Error(`Guide 目标节点缺少 UITransform: ${target.name}`);
     }
     const worldRect = tf.getBoundingBoxToWorld();
-    const width = worldRect.width + padding * 2;
-    const height = worldRect.height + padding * 2;
+    const width = worldRect.width;
+    const height = worldRect.height;
     const center = this.getTargetWorldCenter(target, worldRect);
     return { center, width, height };
   }
@@ -310,7 +318,7 @@ export class Guide extends Component {
   private onMaskTouchEnd(event: EventTouch): void {
     if (this.step !== 1 || !this.progressNode || !this.node.active) return;
     const touch = event.getUILocation();
-    const rect = this.getWorldRect(this.progressNode, this.highlightPadding);
+    const rect = this.getWorldRect(this.progressNode);
     const halfW = rect.width * 0.5;
     const halfH = rect.height * 0.5;
     const inX = touch.x >= rect.center.x - halfW && touch.x <= rect.center.x + halfW;

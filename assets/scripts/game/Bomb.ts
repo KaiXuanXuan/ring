@@ -2,6 +2,7 @@ import { _decorator, Component, Label } from 'cc';
 import { Runtime } from './Runtime';
 
 const { ccclass, property } = _decorator;
+declare const GM: any;
 
 @ccclass('Bomb')
 export class Bomb extends Component {
@@ -12,6 +13,14 @@ export class Bomb extends Component {
   private bombId: string = '';
   private remainingSeconds: number = 0;
   private ticking = false;
+  private isPaused = false;
+  private readonly onPauseGameCountdownHandler = this.onPauseGameCountdown.bind(this);
+  private readonly onResumeGameCountdownHandler = this.onResumeGameCountdown.bind(this);
+
+  onLoad(): void {
+    GM.event.on('pauseGameCountdown', this.onPauseGameCountdownHandler);
+    GM.event.on('resumeGameCountdown', this.onResumeGameCountdownHandler);
+  }
 
   setup(runtime: Runtime, bombId: string, timeoutSec: number): void {
     if (!this.countdownLabel) {
@@ -25,17 +34,21 @@ export class Bomb extends Component {
     this.bombId = bombId;
     this.remainingSeconds = Math.ceil(timeoutSec);
     this.ticking = true;
+    this.isPaused = false;
     this.updateLabel();
     this.schedule(this.tick, 1);
   }
 
   onDestroy(): void {
+    GM.event.off('pauseGameCountdown', this.onPauseGameCountdownHandler);
+    GM.event.off('resumeGameCountdown', this.onResumeGameCountdownHandler);
     this.unschedule(this.tick);
     this.ticking = false;
   }
 
   private tick = (): void => {
     if (!this.ticking) return;
+    if (this.isPaused) return;
     this.remainingSeconds -= 1;
     if (this.remainingSeconds <= 0) {
       this.remainingSeconds = 0;
@@ -56,5 +69,13 @@ export class Bomb extends Component {
       throw new Error('Bomb 缺少 countdownLabel 绑定');
     }
     this.countdownLabel.string = String(this.remainingSeconds);
+  }
+
+  private onPauseGameCountdown(): void {
+    this.isPaused = true;
+  }
+
+  private onResumeGameCountdown(): void {
+    this.isPaused = false;
   }
 }
