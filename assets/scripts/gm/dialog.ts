@@ -139,8 +139,12 @@ export class DialogModule implements IDialogModule {
     this.currentDialog = dialog;
     this.currentPath = path;
 
-    // Apply open animation if enabled
+    // Apply animations if enabled
     if (animation.enabled) {
+      // Play mask fade in animation (slightly faster than dialog)
+      const maskFadeDuration = animation.duration * 0.8;
+      void this.playMaskFadeIn(mask, maskFadeDuration);
+      // Play dialog open animation
       await this.playOpenAnimation(dialog, animation.duration);
     }
 
@@ -183,9 +187,14 @@ export class DialogModule implements IDialogModule {
     // Play close animation if enabled, otherwise destroy immediately
     if (animation.enabled) {
       await this.playCloseAnimation(dialog, animation.duration);
+      // Play mask fade out animation after dialog closes
+      if (mask) {
+        const maskFadeDuration = animation.duration * 0.5;
+        await this.playMaskFadeOut(mask, maskFadeDuration);
+      }
     }
 
-    // Destroy mask immediately (no animation)
+    // Destroy mask after animation (or immediately if animation disabled)
     if (mask) {
       mask.destroy();
     }
@@ -215,6 +224,11 @@ export class DialogModule implements IDialogModule {
     if (this.closeTween) {
       this.closeTween.stop();
       this.closeTween = null;
+    }
+
+    // Stop mask animations
+    if (this.currentMask) {
+      Tween.stopAllByTarget(this.currentMask);
     }
 
     this.currentDialog = null;
@@ -321,6 +335,56 @@ export class DialogModule implements IDialogModule {
   }
 
   /**
+   * Play mask fade in animation.
+   * @param mask - Mask node to animate
+   * @param duration - Animation duration in seconds
+   * @returns Promise that resolves when animation completes
+   */
+  private playMaskFadeIn(mask: Node, duration: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const opacityComp = mask.getComponent(UIOpacity);
+      if (!opacityComp) {
+        resolve();
+        return;
+      }
+
+      opacityComp.opacity = 0;
+
+      tween(opacityComp)
+        .to(duration, { opacity: 128 })
+        .call(() => {
+          opacityComp.opacity = 128;
+          resolve();
+        })
+        .start();
+    });
+  }
+
+  /**
+   * Play mask fade out animation.
+   * @param mask - Mask node to animate
+   * @param duration - Animation duration in seconds
+   * @returns Promise that resolves when animation completes
+   */
+  private playMaskFadeOut(mask: Node, duration: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const opacityComp = mask.getComponent(UIOpacity);
+      if (!opacityComp) {
+        resolve();
+        return;
+      }
+
+      tween(opacityComp)
+        .to(duration, { opacity: 0 })
+        .call(() => {
+          opacityComp.opacity = 0;
+          resolve();
+        })
+        .start();
+    });
+  }
+
+  /**
    * Create a semi-transparent mask node.
    * Black background at 50% opacity (128/255).
    * Blocks interaction with underlying UI.
@@ -340,9 +404,13 @@ export class DialogModule implements IDialogModule {
     w.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
     w.updateAlignment();
 
-    // Add Sprite for visual - black at 50% opacity (128/255)
+    // Add UIOpacity for fade animation
+    const opacityComp = mask.addComponent(UIOpacity);
+    opacityComp.opacity = 0; // Start transparent
+
+    // Add Sprite for visual - black, opacity controlled by UIOpacity
     const sprite = mask.addComponent(Sprite);
-    sprite.color = new Color(0, 0, 0, 128);
+    sprite.color = new Color(0, 0, 0, 255);
     sprite.spriteFrame = this.createDefaultSpriteFrame();
 
     // Add BlockInputEvents to prevent click-through to underlying UI
