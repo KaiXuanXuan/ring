@@ -7,6 +7,7 @@
 
 import { _decorator, Component, Node, Button, Label } from 'cc';
 import { Repo } from '../game/Repo';
+import { LevelConfig } from '../game/Types';
 
 const { ccclass, property } = _decorator;
 
@@ -65,19 +66,26 @@ export class WinDialog extends Component {
     const currentLevel = window.GM?.data?.getState('currentLevel') ?? 1;
     const nextLevel = currentLevel + 1;
 
-    // Check if next level exists
-    try {
-      Repo.get(nextLevel);
-
-      // Update and start next level
-      window.GM?.data?.setState({ currentLevel: nextLevel });
-      GM.event.emit('startLevel', { level: nextLevel });
-      this.closeDialog();
-    } catch (e) {
-      // No next level, go back to level selection
+    if (!this.hasPlayableLevel(nextLevel)) {
       GM.event.emit('backToLevelSelection');
       this.closeDialog();
+      return;
     }
+
+    // Update and start next level
+    window.GM?.data?.setState({ currentLevel: nextLevel });
+    GM.event.emit('startLevel', { level: nextLevel });
+    this.closeDialog();
+  }
+
+  private hasPlayableLevel(level: number): boolean {
+    let cfg: LevelConfig;
+    try {
+      cfg = Repo.get(level);
+    } catch {
+      return false;
+    }
+    return Array.isArray(cfg.rings) && cfg.rings.length > 0;
   }
 
   /**
