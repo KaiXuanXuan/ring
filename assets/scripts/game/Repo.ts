@@ -32,6 +32,17 @@ export class Repo {
     return Array.from(this.levels.keys());
   }
 
+  static getFirstBombLevelId(): number {
+    const ids = this.getAllIds().sort((a, b) => a - b);
+    for (const id of ids) {
+      const level = this.get(id);
+      if (level.bombs.length > 0) {
+        return id;
+      }
+    }
+    throw new Error('Repo 中未配置包含炸弹的关卡');
+  }
+
   private static createLevel1(): LevelConfig {
     return {
       "id": 1,

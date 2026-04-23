@@ -19,6 +19,7 @@ import {
   input,
   resources,
 } from 'cc';
+import { Repo } from '../game/Repo';
 
 const { ccclass, property } = _decorator;
 
@@ -35,6 +36,7 @@ export class Guide extends Component {
   private readonly tipPathStep1 = 'ui/text/所有的锁环需要在 规定的时间内解锁';
   private readonly tipPathStep2 = 'ui/text/旋转锁环使锁环与卡扣 对齐，锁环将被解锁。';
   private readonly ringInteractionCenterOffset = new Vec3(0, 15, 0);
+  private readonly guideDialogPath = 'prefab/GuideDialog';
 
   private step: GuideStep = 0;
   private maskLayer: Node | null = null;
@@ -54,15 +56,26 @@ export class Guide extends Component {
   private tipFramesReady = false;
   private pendingLevel1Guide = false;
   private countdownPausedByGuide = false;
+  private firstBombLevel = -1;
+  private bombGuideDialogOpening = false;
 
   private readonly onStartLevelHandler = (data?: { level?: number }) => {
     const level = Number(data?.level ?? GM?.data?.getState('currentLevel') ?? 1);
     if (level === 1) {
       this.pendingLevel1Guide = true;
-      this.tryStartGuide();
+      if (this.tipFramesReady) {
+        this.startGuide();
+        this.pendingLevel1Guide = false;
+      }
     } else {
       this.pendingLevel1Guide = false;
       this.stopGuide();
+    }
+    if (level === this.firstBombLevel) {
+      void this.openGuideDialog();
+    } else {
+      this.bombGuideDialogOpening = false;
+      this.resumeCountdown();
     }
   };
 
@@ -73,11 +86,18 @@ export class Guide extends Component {
     }
   };
 
+  private readonly onGuideDialogClosedHandler = () => {
+    this.resumeCountdown();
+    this.bombGuideDialogOpening = false;
+  };
+
   onLoad(): void {
+    this.firstBombLevel = Repo.getFirstBombLevelId();
     this.setupGuideNodes();
     this.node.active = false;
     GM.event.on('startLevel', this.onStartLevelHandler);
     GM.event.on('ringReleased', this.onRingReleasedHandler);
+    GM.event.on('guideDialogClosed', this.onGuideDialogClosedHandler);
     input.on(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
     this.initTipFrames();
   }
@@ -92,7 +112,10 @@ export class Guide extends Component {
       this.tipFramesReady = true;
       const level = Number(GM?.data?.getState('currentLevel') ?? 1);
       this.pendingLevel1Guide = level === 1 || this.pendingLevel1Guide;
-      this.tryStartGuide();
+      if (this.pendingLevel1Guide) {
+        this.startGuide();
+        this.pendingLevel1Guide = false;
+      }
     }).catch((err: unknown) => {
       throw err instanceof Error ? err : new Error('Guide 文案资源加载失败');
     });
@@ -101,7 +124,33 @@ export class Guide extends Component {
   onDestroy(): void {
     GM.event.off('startLevel', this.onStartLevelHandler);
     GM.event.off('ringReleased', this.onRingReleasedHandler);
+    GM.event.off('guideDialogClosed', this.onGuideDialogClosedHandler);
     input.off(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
+    this.resumeCountdown();
+  }
+
+  private async openGuideDialog(): Promise<void> {
+    if (this.bombGuideDialogOpening) return;
+    this.bombGuideDialogOpening = true;
+    this.pauseCountdown();
+    const dialogNode = await GM.dialog.open({ path: this.guideDialogPath });
+    if (!dialogNode) {
+      this.bombGuideDialogOpening = false;
+      this.resumeCountdown();
+      throw new Error(`[Guide] Failed to open dialog: ${this.guideDialogPath}`);
+    }
+  }
+
+  private pauseCountdown(): void {
+    if (this.countdownPausedByGuide) return;
+    GM.event.emit('pauseGameCountdown');
+    this.countdownPausedByGuide = true;
+  }
+
+  private resumeCountdown(): void {
+    if (!this.countdownPausedByGuide) return;
+    GM.event.emit('resumeGameCountdown');
+    this.countdownPausedByGuide = false;
   }
 
   private setupGuideNodes(): void {
@@ -181,28 +230,14 @@ export class Guide extends Component {
     }
     this.step = 1;
     this.node.active = true;
-    if (!this.countdownPausedByGuide) {
-      GM.event.emit('pauseGameCountdown');
-      this.countdownPausedByGuide = true;
-    }
+    this.pauseCountdown();
     this.enterStep1();
-  }
-
-  private tryStartGuide(): void {
-    if (!this.pendingLevel1Guide || !this.tipFramesReady) {
-      return;
-    }
-    this.startGuide();
-    this.pendingLevel1Guide = false;
   }
 
   private stopGuide(): void {
     this.step = 0;
     this.node.active = false;
-    if (this.countdownPausedByGuide) {
-      GM.event.emit('resumeGameCountdown');
-      this.countdownPausedByGuide = false;
-    }
+    this.resumeCountdown();
     if (this.handNode && this.handNode.isValid) {
       this.handNode.destroy();
       this.handNode = null;
