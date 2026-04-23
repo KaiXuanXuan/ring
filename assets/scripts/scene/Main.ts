@@ -73,7 +73,7 @@ export class Main extends Component {
     // Default entry: start game view directly
     const storedLevel = Number(window.GM?.data?.getState('currentLevel') ?? 1);
     this.currentLevel = Number.isFinite(storedLevel) && storedLevel > 0 ? storedLevel : 1;
-    this.startLevel({ level: this.currentLevel });
+    GM.event.emit('startLevel', { level: this.currentLevel });
   }
 
   onDestroy(): void {
@@ -110,6 +110,7 @@ export class Main extends Component {
   private startLevel(data: { level?: number }): void {
     const level = data?.level ?? this.currentLevel;
     this.currentLevel = level;
+    GM.data.setState({ currentLevel: level });
     AdService.reportLvStart(level);
 
     // Switch to game panel

@@ -424,6 +424,7 @@ export class Runtime extends Component {
    */
   private finishRelease(ringId: string): void {
     if (!this.state) return;
+    GM.event.emit('ringReleased', { ringId });
 
     // 处理炸弹
     for (const [id, bomb] of this.state.bombs) {
