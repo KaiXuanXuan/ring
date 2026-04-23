@@ -114,6 +114,37 @@ export interface SceneModule {
 }
 
 /**
+ * Dialog animation configuration.
+ * Used to control open/close animation behavior.
+ */
+export interface DialogAnimationConfig {
+  /** Whether animation is enabled (default: true) */
+  enabled?: boolean;
+  /** Animation duration in seconds (default: 0.3) */
+  duration?: number;
+}
+
+/**
+ * Dialog open configuration.
+ */
+export interface DialogOpenConfig {
+  /** Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog') */
+  path: string;
+  /** Parent node for dialog and mask (required) */
+  parent: any; // Node from 'cc'
+  /** Animation configuration (optional) */
+  animation?: DialogAnimationConfig;
+}
+
+/**
+ * Dialog close configuration.
+ */
+export interface DialogCloseConfig {
+  /** Animation configuration (optional) */
+  animation?: DialogAnimationConfig;
+}
+
+/**
  * Dialog Module Interface
  * Provides single-layer dialog management with auto-masking.
  */
@@ -124,32 +155,33 @@ export interface DialogModule {
    * Auto-creates semi-transparent mask behind dialog.
    * Silent fail - returns undefined if prefab not found.
    * Emits 'dialogOpen' event with { node, path } payload on success.
-   * @param config - Configuration object for dialog opening
+   *
    * @param config.path - Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog')
-   * @param config.parent - Parent node for dialog and mask (defaults to parent set via setParent())
+   * @param config.parent - Parent node for dialog and mask (required)
+   * @param config.animation - Optional animation configuration
+   * @param config.animation.enabled - Whether animation is enabled (default: true)
+   * @param config.animation.duration - Animation duration in seconds (default: 0.3)
    * @returns Promise resolving to the dialog Node, or undefined on failure
    */
-  open(config: { path: string; parent?: any }): Promise<any | undefined>; // Node from 'cc'
+  open(config: DialogOpenConfig): Promise<any | undefined>; // Node from 'cc'
 
   /**
    * Close the current dialog.
    * Destroys both dialog and mask.
    * Emits 'dialogClose' event with { node, path } payload.
    * Safe to call when no dialog is open (no-op).
+   *
+   * @param config.animation - Optional animation configuration
+   * @param config.animation.enabled - Whether animation is enabled (default: true)
+   * @param config.animation.duration - Animation duration in seconds (default: 0.3)
+   * @returns Promise that resolves when dialog is closed and destroyed
    */
-  close(): void;
+  close(config?: DialogCloseConfig): Promise<void>;
 
   /**
    * Detach dialog/mask references without destroying nodes. Used when the dialog tree will be removed by scene unload (e.g. replay).
    */
   detachOpenDialog(): void;
-
-  /**
-   * Set the default parent node for dialogs and masks.
-   * Used as fallback when parent is not provided to open().
-   * @param parent - Parent node (typically canvas)
-   */
-  setParent(parent: any): void; // Node from 'cc'
 }
 
 /**

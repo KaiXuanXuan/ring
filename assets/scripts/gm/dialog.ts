@@ -3,8 +3,8 @@
  * Provides single-layer dialog management with auto-masking.
  */
 
-import { Node, UITransform, Color, Sprite, Widget, SpriteFrame, Texture2D, BlockInputEvents } from 'cc';
-import type { DialogModule as IDialogModule, EventModule, PrefabModule } from './types';
+import { Node, UITransform, Color, Sprite, Widget, SpriteFrame, Texture2D, BlockInputEvents, UIOpacity, tween, Tween, Vec3 } from 'cc';
+import type { DialogModule as IDialogModule, EventModule, PrefabModule, DialogOpenConfig, DialogCloseConfig } from './types';
 
 /**
  * DialogModule Implementation
@@ -29,6 +29,18 @@ export class DialogModule implements IDialogModule {
   /** Parent node for dialogs and masks */
   private parent: Node | null = null;
 
+  /** Current close animation tween (if any) */
+  private closeTween: Tween<any> | null = null;
+
+  /** Current open animation tween (if any) */
+  private openTween: Tween<any> | null = null;
+
+  /** Default animation configuration */
+  private defaultAnimationConfig = {
+    enabled: true,
+    duration: 0.3,
+  };
+
   /**
    * Create a DialogModule instance.
    * @param event - EventModule reference for emitting 'dialogOpen' and 'dialogClose' events
@@ -41,10 +53,10 @@ export class DialogModule implements IDialogModule {
 
   /**
    * Set the parent node for dialogs and masks.
-   * Should be called once during initialization with the canvas node.
+   * Internal use only for maintaining single-layer dialog behavior.
    * @param parent - Parent node (typically canvas)
    */
-  setParent(parent: Node): void {
+  private setParent(parent: Node): void {
     this.parent = parent;
   }
 
@@ -52,37 +64,47 @@ export class DialogModule implements IDialogModule {
    * Open a dialog from prefab path.
    * Closes any existing dialog first (single-layer behavior).
    * Auto-creates semi-transparent mask behind dialog.
-   * Silent fail - returns undefined if prefab not found or parent not set.
+   * Silent fail - returns undefined if prefab not found.
    * Emits 'dialogOpen' event with { node, path } payload on success.
    *
-   * @param config - Configuration object for dialog opening
    * @param config.path - Resources path to dialog prefab (e.g., 'prefabs/ConfirmDialog')
-   * @param config.parent - Optional parent node (defaults to parent set via setParent())
+   * @param config.parent - Parent node for dialog and mask (required)
+   * @param config.animation - Optional animation configuration
+   * @param config.animation.enabled - Whether animation is enabled (default: true)
+   * @param config.animation.duration - Animation duration in seconds (default: 0.3)
    * @returns Promise resolving to the dialog Node, or undefined on failure
    */
-  async open(config: { path: string; parent?: Node }): Promise<Node | undefined> {
-    const { path, parent: configParent } = config;
+  async open(config: DialogOpenConfig): Promise<Node | undefined> {
+    const { path, parent, animation: animConfig } = config;
 
     // Validate path
     if (!path) {
+      console.error('[DialogModule] Path is required. Provide a valid prefab path in config.');
       return undefined;
     }
 
-    // Use config parent or fall back to default parent
-    const parent = configParent ?? this.parent;
-
-    // Validate parent
+    // Validate parent (required)
     if (!parent) {
-      console.error('[DialogModule] Parent not set. Provide parent in config or call setParent() first.');
+      console.error('[DialogModule] Parent is required. Provide parent in config.');
       return undefined;
     }
+
+    // Store parent for future use (single-layer behavior)
+    this.parent = parent;
+
+    // Merge animation config with defaults
+    const animation = {
+      enabled: animConfig?.enabled ?? this.defaultAnimationConfig.enabled,
+      duration: animConfig?.duration ?? this.defaultAnimationConfig.duration,
+    };
 
     // Close existing dialog (single-layer constraint - DIALOG-03)
+    // Wait for close animation if enabled
     if (this.currentDialog) {
-      this.close();
+      await this.close({ animation });
     }
 
-    // Create mask node first
+    // Create mask node first (mask has no animation)
     const mask = this.createMask();
     this.currentMask = mask;
 
@@ -109,6 +131,11 @@ export class DialogModule implements IDialogModule {
     this.currentDialog = dialog;
     this.currentPath = path;
 
+    // Apply open animation if enabled
+    if (animation.enabled) {
+      await this.playOpenAnimation(dialog, animation.duration);
+    }
+
     // Emit event
     this.event.emit('dialogOpen', { node: dialog, path });
 
@@ -120,30 +147,51 @@ export class DialogModule implements IDialogModule {
    * Destroys both dialog and mask.
    * Emits 'dialogClose' event with { node, path } payload.
    * Safe to call when no dialog is open (no-op).
+   *
+   * @param config.animation - Optional animation configuration
+   * @param config.animation.enabled - Whether animation is enabled (default: true)
+   * @param config.animation.duration - Animation duration in seconds (default: 0.3)
+   * @returns Promise that resolves when dialog is closed and destroyed
    */
-  close(): void {
+  async close(config?: DialogCloseConfig): Promise<void> {
     if (!this.currentDialog) {
       return; // No dialog open, nothing to do
     }
 
-    // Emit event before destruction (DIALOG-05)
-    this.event.emit('dialogClose', {
-      node: this.currentDialog,
-      path: this.currentPath
-    });
+    // Merge animation config with defaults
+    const animation = {
+      enabled: config?.animation?.enabled ?? this.defaultAnimationConfig.enabled,
+      duration: config?.animation?.duration ?? this.defaultAnimationConfig.duration,
+    };
+
+    // Store references for cleanup
+    const dialog = this.currentDialog;
+    const mask = this.currentMask;
+    const path = this.currentPath;
+
+    // Emit event before animation starts (DIALOG-05)
+    this.event.emit('dialogClose', { node: dialog, path });
+
+    // Play close animation if enabled, otherwise destroy immediately
+    if (animation.enabled) {
+      await this.playCloseAnimation(dialog, animation.duration);
+    }
+
+    // Destroy mask immediately (no animation)
+    if (mask) {
+      mask.destroy();
+    }
 
     // Destroy dialog using PrefabModule (DIALOG-04, DIALOG-05)
-    this.prefab.destroy(this.currentDialog);
-
-    // Destroy mask directly
-    if (this.currentMask) {
-      this.currentMask.destroy();
-    }
+    // Stop any remaining animations before destroy
+    Tween.stopAllByTarget(dialog);
+    this.prefab.destroy(dialog);
 
     // Clear references
     this.currentDialog = null;
     this.currentMask = null;
     this.currentPath = '';
+    this.closeTween = null;
   }
 
   /**
@@ -151,9 +199,117 @@ export class DialogModule implements IDialogModule {
    * 避免先 close() 导致遮罩消失、露出底层一帧再切场景造成的闪烁。
    */
   detachOpenDialog(): void {
+    // Stop any running animations
+    if (this.openTween) {
+      this.openTween.stop();
+      this.openTween = null;
+    }
+    if (this.closeTween) {
+      this.closeTween.stop();
+      this.closeTween = null;
+    }
+
     this.currentDialog = null;
     this.currentMask = null;
     this.currentPath = '';
+  }
+
+  /**
+   * Play open animation for dialog node.
+   * Animates from scale 0.5/opacity 0 to scale 1/opacity 255 with backOut easing.
+   * @param dialog - Dialog node to animate
+   * @param duration - Animation duration in seconds
+   * @returns Promise that resolves when animation completes
+   */
+  private playOpenAnimation(dialog: Node, duration: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      // Ensure UIOpacity component exists
+      let opacityComp = dialog.getComponent(UIOpacity);
+      if (!opacityComp) {
+        opacityComp = dialog.addComponent(UIOpacity);
+      }
+
+      // Set initial state: small scale and transparent
+      dialog.setScale(0.5, 0.5, 1);
+      opacityComp.opacity = 0;
+
+      // Stop any existing animation
+      Tween.stopAllByTarget(dialog);
+
+      // Create animation state object
+      const state = {
+        scale: 0.5,
+        opacity: 0,
+      };
+
+      // Play animation
+      this.openTween = tween(state)
+        .to(duration, {
+          scale: 1,
+          opacity: 255,
+        }, {
+          easing: 'backOut',
+          onUpdate: () => {
+            dialog.setScale(state.scale, state.scale, 1);
+            opacityComp.opacity = Math.floor(state.opacity);
+          },
+        })
+        .call(() => {
+          // Ensure final values are set
+          dialog.setScale(1, 1, 1);
+          opacityComp.opacity = 255;
+          this.openTween = null;
+          resolve();
+        })
+        .start();
+    });
+  }
+
+  /**
+   * Play close animation for dialog node.
+   * Animates from scale 1/opacity 255 to scale 0.5/opacity 0 with backIn easing.
+   * @param dialog - Dialog node to animate
+   * @param duration - Animation duration in seconds
+   * @returns Promise that resolves when animation completes
+   */
+  private playCloseAnimation(dialog: Node, duration: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      // Ensure UIOpacity component exists
+      let opacityComp = dialog.getComponent(UIOpacity);
+      if (!opacityComp) {
+        opacityComp = dialog.addComponent(UIOpacity);
+      }
+
+      // Stop any existing animation
+      Tween.stopAllByTarget(dialog);
+
+      // Create animation state object
+      const state = {
+        scale: 1,
+        opacity: 255,
+      };
+
+      // Play animation
+      this.closeTween = tween(state)
+        .to(duration, {
+          scale: 0.5,
+          opacity: 0,
+        }, {
+          easing: 'backIn',
+          onUpdate: () => {
+            dialog.setScale(state.scale, state.scale, 1);
+            opacityComp.opacity = Math.floor(state.opacity);
+          },
+        })
+        .call(() => {
+          // Ensure final values are set
+          dialog.setScale(0.5, 0.5, 1);
+          opacityComp.opacity = 0;
+          this.closeTween = null;
+          resolve();
+        })
+        .start();
+    });
   }
 
   /**

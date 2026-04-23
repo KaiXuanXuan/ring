@@ -53,14 +53,11 @@ window.GM.audio.init({ audio: 'audio' });
 ### 在任意脚本中使用
 
 ```typescript
-// 发送事件
-window.GM.event.emit('playerDie', { reason: 'collision' });
+// 打开弹窗
+window.GM.dialog.open({ path: 'prefabs/ConfirmDialog', parent: this.node });
 
 // 获取状态
 const level = window.GM.data.getState<number>('level');
-
-// 打开弹窗
-window.GM.dialog.open({ path: 'prefabs/ConfirmDialog' });
 ```
 
 ---
@@ -214,44 +211,41 @@ export class GameUI extends Component {
   @property(Node)
   canvas: Node = null;
 
-  start() {
-    // 设置弹窗默认父节点（通常是 Canvas）
-    window.GM.dialog.setParent(this.canvas);
-  }
-
-  async showConfirm() {
-    // 方式1: 使用 setParent 设置的默认父节点
-    const dialog = await window.GM.dialog.open({
-      path: 'prefabs/ConfirmDialog'
-    });
-    if (dialog) {
-      console.log('弹窗已打开');
-      // 发送 'dialogOpen' 事件
-    }
-  }
-
-  async showConfirmWithCustomParent() {
-    // 方式2: 直接指定父节点（无需调用 setParent）
-    const dialog = await window.GM.dialog.open({
+  openConfirm() {
+    // 打开弹窗（必须传入 parent 参数）
+    window.GM.dialog.open({
       path: 'prefabs/ConfirmDialog',
-      parent: this.node  // 使用自定义父节点
+      parent: this.node, // 自定义父节点
     });
   }
 
   closeDialog() {
+    // 关闭弹窗（动画在后台播放）
     window.GM.dialog.close();
-    // 发送 'dialogClose' 事件
   }
 }
 ```
 
 **特性**:
+- **动画效果**: 弹窗打开/关闭带有缩放+淡入淡出动画（默认时长 0.3 秒）
+- **无需等待**: 游戏中正常调用 `open()` 和 `close()` 不需要 `await`，动画时间很短
+- **自定义动画**: 可通过 `animation` 参数控制动画行为：
+  ```typescript
+  // 禁用动画
+  window.GM.dialog.open({
+    path: 'prefabs/ConfirmDialog',
+    parent: this.node, // 自定义父节点
+    animation: { enabled: false }
+  });
+
+  // 自定义动画时长
+  window.GM.dialog.close({
+    animation: { duration: 0.5 }
+  });
+  ```
 - **单层模式**: 打开新弹窗时自动关闭已有弹窗
 - **自动遮罩**: 弹窗后自动创建半透明黑色遮罩（50% 透明度）
-- **灵活父节点**: 支持两种方式设置父节点：
-  - 使用 `setParent()` 设置默认父节点，`open()` 时省略 parent
-  - 直接在 `open()` 中传入 `parent` 参数（优先级高于 setParent）
-- **静默失败**: 加载失败或未设置 parent 时返回 `undefined`
+- **必需参数**: `open()` 方法必须传入 `parent` 参数
 
 ---
 
@@ -361,9 +355,8 @@ window.GM.audio.setSfxVolume(1);
 
 | 方法 | 参数 | 返回值 |
 |------|------|--------|
-| `setParent(parent)` | 父节点 | void |
-| `open(config)` | `{ path, parent? }` - path 为 Prefab 路径，parent 可选 | `Promise<Node \| undefined>` |
-| `close()` | - | void |
+| `open(config)` | `{ path, parent, animation? }` - path 为 Prefab 路径，parent 为必需的父节点，animation 为动画配置 | `Promise<Node \| undefined>` |
+| `close(config?)` | `{ animation? }` - 可选动画配置（enabled, duration） | `Promise<void>` |
 
 ### AudioModule
 
@@ -392,7 +385,7 @@ window.GM.audio.setSfxVolume(1);
 
 4. **Prefab 路径**: `path` 参数是相对于 `resources` 目录的路径，不含扩展名
 
-5. **弹窗父节点**: DialogModule 必须先调用 `setParent()` 才能正常工作
+5. **弹窗父节点**: DialogModule 的 `open()` 方法必须传入 `parent` 参数
 
 6. **音频**: `audio.init()` 须在已有活动场景时调用（否则抛错）；`init({ audio: '...' })` 指定 resources 下子目录（默认 `audio`）；跨场景保留可传 `persistRoot: true`
 

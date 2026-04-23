@@ -133,7 +133,7 @@ export class Guide extends Component {
     if (this.bombGuideDialogOpening) return;
     this.bombGuideDialogOpening = true;
     this.pauseCountdown();
-    const dialogNode = await GM.dialog.open({ path: this.guideDialogPath });
+    const dialogNode = await GM.dialog.open({ path: this.guideDialogPath, parent: this.node });
     if (!dialogNode) {
       this.bombGuideDialogOpening = false;
       this.resumeCountdown();
