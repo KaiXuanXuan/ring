@@ -208,12 +208,89 @@ export class Repo {
 
   private static createLevel4(): LevelConfig {
     return {
-      "id": 4,
-      "name": "Level 4",
-      "rings": [],
-      "buckles": [],
-      "rocks": [],
-      "bombs": []
+      "id": 1,
+      "name": "Level 1",
+      "rings": [
+        {
+          "id": "ring1",
+          "position": {
+            "x": -200,
+            "y": 0
+          },
+          "angle": 90
+        },
+        {
+          "id": "ring2",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "angle": 0
+        },
+        {
+          "id": "ring3",
+          "position": {
+            "x": 200,
+            "y": 0
+          },
+          "angle": -90
+        },
+        {
+          "id": "ring4",
+          "position": {
+            "x": -200,
+            "y": -200
+          },
+          "angle": 180
+        },
+        {
+          "id": "ring5",
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "angle": 0
+        }
+      ],
+      "buckles": [
+        {
+          "id": "buckle1",
+          "ringId": "ring1",
+          "angle": -90,
+          "linkedRingId": "ring4"
+        },
+        {
+          "id": "buckle5",
+          "ringId": "ring2",
+          "angle": 90,
+          "linkedRingId": "ring3"
+        },
+        {
+          "id": "buckle1",
+          "ringId": "ring2",
+          "angle": -90,
+          "linkedRingId": "ring1"
+        },
+        {
+          "id": "buckle1",
+          "ringId": "ring3",
+          "angle": -90,
+          "linkedRingId": "ring5"
+        }
+      ],
+      "rocks": [
+        {
+          "id": "rock1",
+          "ringId": "ring4"
+        }
+      ],
+      "bombs": [
+        {
+          "id": "bomb1",
+          "ringId": "ring5",
+          "countdown": 30
+        }
+      ]
     };
   }
 

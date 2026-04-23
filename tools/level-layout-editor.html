@@ -22,6 +22,7 @@
     .canvas-hint.visible { display: block; }
     h3 { margin: 12px 0 8px; }
     .small { font-size: 12px; color: #bbb; }
+    .entity-item { border: 1px solid #333; border-radius: 4px; padding: 6px; margin-bottom: 6px; }
   </style>
 </head>
 <body>
@@ -52,6 +53,21 @@
 
       <h3>Rings</h3>
       <div id="ringList"></div>
+
+      <h3>岩石</h3>
+      <div class="row">
+        <select id="rockRingSelect"></select>
+        <button id="addRockBtn">新增 Rock</button>
+      </div>
+      <div id="rockList"></div>
+
+      <h3>炸弹</h3>
+      <div class="row">
+        <select id="bombRingSelect"></select>
+        <input id="bombCountdownInput" type="number" min="1" value="30" title="默认倒计时（秒）" />
+        <button id="addBombBtn">新增 Bomb</button>
+      </div>
+      <div id="bombList"></div>
 
       <h3>导出</h3>
       <div class="row">
@@ -114,6 +130,13 @@
       autoSpreadBtn: document.getElementById("autoSpreadBtn"),
       overlapStatus: document.getElementById("overlapStatus"),
       ringList: document.getElementById("ringList"),
+      rockRingSelect: document.getElementById("rockRingSelect"),
+      addRockBtn: document.getElementById("addRockBtn"),
+      rockList: document.getElementById("rockList"),
+      bombRingSelect: document.getElementById("bombRingSelect"),
+      bombCountdownInput: document.getElementById("bombCountdownInput"),
+      addBombBtn: document.getElementById("addBombBtn"),
+      bombList: document.getElementById("bombList"),
       exportRepoBtn: document.getElementById("exportRepoBtn"),
       stage: document.getElementById("stage"),
       canvasHint: document.getElementById("canvasHint"),
@@ -273,6 +296,7 @@
         const color = RING_COLORS[i % RING_COLORS.length];
         drawRing(r, color, overlapSet.has(r.id), r.id === state.selectedRingId);
       });
+      drawEntities();
 
       updateCanvasInteractionHint();
 
@@ -282,6 +306,40 @@
       } else {
         el.overlapStatus.className = "ok";
         el.overlapStatus.textContent = "无重叠";
+      }
+    }
+
+    function drawEntities() {
+      for (const rock of state.rocks) {
+        const ring = state.rings.find((x) => x.id === rock.ringId);
+        if (!ring) {
+          throw new Error(`Rock 绑定 ring 不存在: ${rock.ringId}`);
+        }
+        const c = worldToCanvas(getRenderCenter(ring));
+        ctx.fillStyle = "#a0a0a0";
+        ctx.fillRect(c.x - 8, c.y - 8, 16, 16);
+        ctx.strokeStyle = "#1a1a1a";
+        ctx.strokeRect(c.x - 8, c.y - 8, 16, 16);
+        ctx.fillStyle = "#101010";
+        ctx.font = "10px Arial";
+        ctx.fillText("R", c.x - 3, c.y + 3);
+      }
+
+      for (const bomb of state.bombs) {
+        const ring = state.rings.find((x) => x.id === bomb.ringId);
+        if (!ring) {
+          throw new Error(`Bomb 绑定 ring 不存在: ${bomb.ringId}`);
+        }
+        const c = worldToCanvas(getRenderCenter(ring));
+        ctx.fillStyle = "#ff5f5f";
+        ctx.beginPath();
+        ctx.arc(c.x + 16, c.y - 16, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#3a0f0f";
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "9px Arial";
+        ctx.fillText("B", c.x + 13, c.y - 13);
       }
     }
 
@@ -335,6 +393,8 @@
       box.querySelector('[data-act="del"]').addEventListener("click", () => {
         if (state.selectedRingId === r.id) state.selectedRingId = null;
         state.rings = state.rings.filter(x => x.id !== r.id);
+        state.rocks = state.rocks.filter(x => x.ringId !== r.id);
+        state.bombs = state.bombs.filter(x => x.ringId !== r.id);
         refreshEditors();
         render();
       });
@@ -410,10 +470,74 @@
     function refreshEditors() {
       el.ringList.innerHTML = "";
       state.rings.forEach(r => el.ringList.appendChild(makeRingEditor(r)));
+      refreshEntityEditors();
       render();
     }
 
+    function ringOptionsHtml() {
+      return state.rings.map((r) => `<option value="${r.id}">${r.id}</option>`).join("");
+    }
+
+    function refreshEntityEditors() {
+      const options = ringOptionsHtml();
+      el.rockRingSelect.innerHTML = options;
+      el.bombRingSelect.innerHTML = options;
+
+      el.rockList.innerHTML = "";
+      state.rocks.forEach((rock, idx) => {
+        const item = document.createElement("div");
+        item.className = "entity-item";
+        item.innerHTML = `
+          <div class="row">
+            <span>${rock.id} -> ${rock.ringId}</span>
+            <button data-rm="${idx}">删除</button>
+          </div>
+        `;
+        item.querySelector("button").addEventListener("click", () => {
+          state.rocks.splice(idx, 1);
+          refreshEditors();
+        });
+        el.rockList.appendChild(item);
+      });
+
+      el.bombList.innerHTML = "";
+      state.bombs.forEach((bomb, idx) => {
+        const item = document.createElement("div");
+        item.className = "entity-item";
+        item.innerHTML = `
+          <div class="row">
+            <span>${bomb.id} -> ${bomb.ringId}</span>
+            <button data-rm="${idx}">删除</button>
+          </div>
+          <div class="row">
+            <label>Countdown</label>
+            <input data-k="countdown" type="number" min="1" value="${bomb.countdown ?? 30}" />
+          </div>
+        `;
+        item.querySelector("button").addEventListener("click", () => {
+          state.bombs.splice(idx, 1);
+          refreshEditors();
+        });
+        item.querySelector('[data-k="countdown"]').addEventListener("input", (e) => {
+          bomb.countdown = Number(e.target.value);
+          render();
+        });
+        el.bombList.appendChild(item);
+      });
+    }
+
     function exportConfigObject() {
+      for (const rock of state.rocks) {
+        if (!state.rings.find((x) => x.id === rock.ringId)) {
+          throw new Error(`导出失败：Rock 绑定 ring 不存在: ${rock.ringId}`);
+        }
+      }
+      for (const bomb of state.bombs) {
+        if (!state.rings.find((x) => x.id === bomb.ringId)) {
+          throw new Error(`导出失败：Bomb 绑定 ring 不存在: ${bomb.ringId}`);
+        }
+      }
+
       const exportedBuckles = [];
       for (const r of state.rings) {
         for (const b of r.buckles) {
@@ -488,6 +612,36 @@
       refreshEditors();
     });
     el.autoSpreadBtn.addEventListener("click", autoSpread);
+
+    el.addRockBtn.addEventListener("click", () => {
+      const ringId = el.rockRingSelect.value;
+      if (!state.rings.find((x) => x.id === ringId)) {
+        throw new Error(`新增 Rock 失败：ring 不存在: ${ringId}`);
+      }
+      if (state.rocks.find((x) => x.ringId === ringId)) {
+        throw new Error(`新增 Rock 失败：ring 已有 Rock: ${ringId}`);
+      }
+      const id = `rock${state.rocks.length + 1}`;
+      state.rocks.push({ id, ringId });
+      refreshEditors();
+    });
+
+    el.addBombBtn.addEventListener("click", () => {
+      const ringId = el.bombRingSelect.value;
+      if (!state.rings.find((x) => x.id === ringId)) {
+        throw new Error(`新增 Bomb 失败：ring 不存在: ${ringId}`);
+      }
+      if (state.bombs.find((x) => x.ringId === ringId)) {
+        throw new Error(`新增 Bomb 失败：ring 已有 Bomb: ${ringId}`);
+      }
+      const countdown = Number(el.bombCountdownInput.value);
+      if (!Number.isFinite(countdown) || countdown <= 0) {
+        throw new Error(`新增 Bomb 失败：countdown 非法: ${el.bombCountdownInput.value}`);
+      }
+      const id = `bomb${state.bombs.length + 1}`;
+      state.bombs.push({ id, ringId, countdown: Math.round(countdown) });
+      refreshEditors();
+    });
 
     el.exportRepoBtn.addEventListener("click", async () => {
       if (!guardExportWhenOverlap()) return;
