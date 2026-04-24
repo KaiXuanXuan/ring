@@ -130,7 +130,7 @@
       dragRingId: null,
       dragOffset: { x: 0, y: 0 },
       selectedRingId: null,
-      /** @type {{ ringId: string, lastWorld: { x: number, y: number } } | null} */
+      /** @type {{ ringId: string, lastWorld: { x: number, y: number }, startAngle: number, accumulatedDelta: number } | null} */
       midRotateState: null,
     };
 
@@ -238,6 +238,14 @@
     function normalize(a) {
       const m = a % 360;
       return m < 0 ? m + 360 : m;
+    }
+
+    function snapAngleToStep(angle, step) {
+      if (!Number.isFinite(angle)) return 0;
+      if (!Number.isFinite(step) || step <= 0) {
+        throw new Error(`非法角度步进: ${step}`);
+      }
+      return Math.round(angle / step) * step;
     }
 
     function overlaps(r1, r2) {
@@ -977,6 +985,8 @@
         state.midRotateState = {
           ringId: ring.id,
           lastWorld: { x: p.x, y: p.y },
+          startAngle: ring.angle,
+          accumulatedDelta: 0,
         };
         render();
         return;
@@ -1020,7 +1030,11 @@
         }
         const center = getRenderCenter(ring);
         const d = pointerAngleDeltaFromCenter(center, state.midRotateState.lastWorld, p);
-        ring.angle = ring.angle + d;
+        state.midRotateState.accumulatedDelta += d;
+        ring.angle = snapAngleToStep(
+          state.midRotateState.startAngle + state.midRotateState.accumulatedDelta,
+          45
+        );
         state.midRotateState.lastWorld = { x: p.x, y: p.y };
         refreshEditors();
         return;
