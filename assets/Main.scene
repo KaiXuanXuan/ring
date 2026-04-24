@@ -2196,7 +2196,7 @@
     },
     "component": "",
     "_componentId": "4adfaujatxERaKf4ck0wsGR",
-    "handler": "onHint",
+    "handler": "hint",
     "customEventData": ""
   },
   {

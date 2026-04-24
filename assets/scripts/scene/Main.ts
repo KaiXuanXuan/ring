@@ -45,7 +45,6 @@ export class Main extends Component {
   private readonly onShowLevelSelectionHandler = this.showLevelSelection.bind(this);
   private readonly onStartLevelHandler = this.startLevel.bind(this);
   private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
-  private readonly onHintHandler = this.onHint.bind(this);
   private readonly onTimeoutHandler = this.onTimeout.bind(this);
   private readonly onLevelCompleteHandler = this.onLevelComplete.bind(this);
   private readonly onOpenFailDialogHandler = this.onOpenFailDialog.bind(this);
@@ -60,7 +59,6 @@ export class Main extends Component {
     // Register GM event listeners
     GM.event.on('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.on('startLevel', this.onStartLevelHandler);
-    GM.event.on('hint', this.onHintHandler);
     GM.event.on('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.on('timeout', this.onTimeoutHandler);
     GM.event.on('levelComplete', this.onLevelCompleteHandler);
@@ -78,7 +76,6 @@ export class Main extends Component {
     // Cleanup event listeners
     GM.event.off('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.off('startLevel', this.onStartLevelHandler);
-    GM.event.off('hint', this.onHintHandler);
     GM.event.off('backToLevelSelection', this.onBackToLevelSelectionHandler);
     GM.event.off('timeout', this.onTimeoutHandler);
     GM.event.off('levelComplete', this.onLevelCompleteHandler);
@@ -138,9 +135,10 @@ export class Main extends Component {
   }
   
   /**
-   * Apply gameplay hint.
+   * Click hint icon.
    */
-  private onHint(): void {
+  private hint(): void {
+    GM.event.emit('hint');
     if (this.skipHintAdOnce) {
       this.skipHintAdOnce = false;
       this.runtime?.applyHintRelease();
