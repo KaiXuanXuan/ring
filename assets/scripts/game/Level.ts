@@ -6,6 +6,7 @@
  */
 
 import { _decorator, Component, Node, Label, Sprite, UITransform } from 'cc';
+import { getLevelConfig } from '../config/LevelConfig';
 
 const { ccclass, property } = _decorator;
 
@@ -156,7 +157,8 @@ export class Level extends Component {
     if (!this.levelLabel) return;
     const label = this.levelLabel.getComponent(Label);
     if (label) {
-      label.string = `Level ${this.currentLevel}`;
+      const config = getLevelConfig(this.currentLevel);
+      label.string = config.name;
     }
   }
 

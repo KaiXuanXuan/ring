@@ -45,8 +45,12 @@ export class WinDialog extends Component {
     // Update level display
     if (this.levelLabel) {
       const label = this.levelLabel.getComponent(Label);
-      if (label) {
-        label.string = data.nextLevel ? `Level ${data.nextLevel}` : 'Level Complete';
+      if (label && data.nextLevel && data.level) {
+        if (data.level === data.nextLevel) {
+          label.string = 'Level Complete';
+        } else {
+          label.string = `Level ${data.nextLevel}`;
+        }
       }
     }
   }

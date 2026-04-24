@@ -242,6 +242,8 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
 };
 
+export const MAX_LEVEL = Object.keys(LEVEL_CONFIGS).length;
+
 export function getLevelConfig(id: number): LevelConfig {
   const config = LEVEL_CONFIGS[id];
   if (!config) {

@@ -6,7 +6,7 @@
  */
 
 import { _decorator, Component, Node } from 'cc';
-import { getLevelConfig } from '../config/LevelConfig';
+import { getLevelConfig, MAX_LEVEL } from '../config/LevelConfig';
 import { Runtime } from '../game/Runtime';
 import { Level } from '../game/Level';
 import { AdService } from '../service/AdService';
@@ -188,14 +188,14 @@ export class Main extends Component {
    */
   private async onLevelComplete(): Promise<void> {
     this.level?.stopTimer();
-    const unlockedRaw = Number(window.GM?.data?.getState('unlockedLevel') ?? 1);
-    const unlockedLevel = Number.isFinite(unlockedRaw) && unlockedRaw > 0 ? Math.floor(unlockedRaw) : 1;
-    const nextUnlockedLevel = Math.max(unlockedLevel, this.currentLevel + 1);
+    const unlockedLevel = Number(window.GM?.data?.getState('unlockedLevel') ?? 1);
+    const nextLevel = Math.min(this.currentLevel + 1, MAX_LEVEL);
+    const nextUnlockedLevel = Math.max(unlockedLevel, nextLevel);
     window.GM?.data?.setState({ unlockedLevel: nextUnlockedLevel });
     AdService.reportLvFinish(this.currentLevel);
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
-      GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel: this.currentLevel + 1 });
+      GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel });
     });
   }
 
