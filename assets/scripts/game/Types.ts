@@ -67,7 +67,7 @@ export interface LevelState {
   rocks: Map<string, RockState>;
 }
 
-export const FIXED_GAP_SIZE = 45;
+export const FIXED_GAP_SIZE = 40;
 // 释放判定容差（度），放宽判定条件
 export const RELEASE_TOLERANCE = 5;
 
