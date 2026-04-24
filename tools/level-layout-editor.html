@@ -577,9 +577,59 @@
       return false;
     }
 
+    function toTsSingleQuotedString(text) {
+      return `'${String(text).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+    }
+
+    function formatInlineObjectArray(items) {
+      if (items.length === 0) return "[]";
+      return `[${items.map((item) => `{ ${item} }`).join(", ")}]`;
+    }
+
+    function formatLevelConfigSnippet(levelKey, cfg) {
+      const ringLines = cfg.rings.map((ring) => (
+        `      { id: ${toTsSingleQuotedString(ring.id)}, position: { x: ${ring.position.x}, y: ${ring.position.y} }, angle: ${ring.angle} },`
+      ));
+      const buckleLines = cfg.buckles.map((buckle) => {
+        const linkedPart = buckle.linkedRingId
+          ? `, linkedRingId: ${toTsSingleQuotedString(buckle.linkedRingId)}`
+          : "";
+        return `      { id: ${toTsSingleQuotedString(buckle.id)}, ringId: ${toTsSingleQuotedString(buckle.ringId)}, angle: ${buckle.angle}${linkedPart} },`;
+      });
+
+      const rocks = formatInlineObjectArray(
+        cfg.rocks.map((rock) => `id: ${toTsSingleQuotedString(rock.id)}, ringId: ${toTsSingleQuotedString(rock.ringId)}`)
+      );
+      const bombs = formatInlineObjectArray(
+        cfg.bombs.map((bomb) => {
+          if (typeof bomb.countdown === "number") {
+            return `id: ${toTsSingleQuotedString(bomb.id)}, ringId: ${toTsSingleQuotedString(bomb.ringId)}, countdown: ${bomb.countdown}`;
+          }
+          return `id: ${toTsSingleQuotedString(bomb.id)}, ringId: ${toTsSingleQuotedString(bomb.ringId)}`;
+        })
+      );
+
+      return [
+        `  ${levelKey}: {`,
+        `    id: ${cfg.id},`,
+        `    name: ${toTsSingleQuotedString(cfg.name)},`,
+        `    ringScale: ${cfg.ringScale},`,
+        `    rings: [`,
+        ...ringLines,
+        `    ],`,
+        `    buckles: [`,
+        ...buckleLines,
+        `    ],`,
+        `    rocks: ${rocks},`,
+        `    bombs: ${bombs},`,
+        `  },`,
+      ].join("\n");
+    }
+
     function exportRepoSnippet() {
       const cfg = exportConfigObject();
-      return `return ${JSON.stringify(cfg, null, 2)};`;
+      const levelKey = Number(cfg.id) || 1;
+      return formatLevelConfigSnippet(levelKey, cfg);
     }
 
     function copyTextFallback(text) {
