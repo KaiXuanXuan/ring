@@ -25,6 +25,10 @@ export class Ring extends Component {
   private gapNode: Node | null = null;
   private static activeDraggingRingId: string | null = null;
 
+  static getActiveDraggingRingId(): string | null {
+    return Ring.activeDraggingRingId;
+  }
+
   onLoad(): void {
     this.cacheNodes();
     input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);

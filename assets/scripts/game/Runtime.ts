@@ -97,6 +97,7 @@ export class Runtime extends Component {
 
   releaseRing(sourceRingId: string, isUserTriggered: boolean = false): void {
     if (!this.state) return;
+    const activeDraggingRingId = Ring.getActiveDraggingRingId();
 
     const candidateIds = new Set<string>([
       sourceRingId,
@@ -106,6 +107,7 @@ export class Runtime extends Component {
     for (const ringId of candidateIds) {
       const ring = this.state.rings.get(ringId);
       if (!ring || ring.isReleased) continue;
+      if (activeDraggingRingId === ringId) continue;
       if (!canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) continue;
       if (this.releaseQueue.some(item => item.ringId === ringId)) continue;
 
@@ -123,9 +125,11 @@ export class Runtime extends Component {
   applyHintRelease(): void {
     if (!this.state) return;
     if (this.isReleaseAnimating()) return;
+    const activeDraggingRingId = Ring.getActiveDraggingRingId();
 
     const candidateRings = Array.from(this.state.rings.values()).filter((ring) => {
       if (ring.isReleased) return false;
+      if (activeDraggingRingId === ring.id) return false;
       return !this.releaseQueue.some((item) => item.ringId === ring.id);
     });
     if (candidateRings.length === 0) return;
