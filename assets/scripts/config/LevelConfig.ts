@@ -73,7 +73,81 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     rocks: [{ id: 'rock1', ringId: 'ring4' }],
     bombs: [{ id: 'bomb1', ringId: 'ring5', countdown: 30 }],
   },
-  5: { id: 5, name: 'Level 5', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  5: {
+      "id": 1,
+      "name": "Level 1",
+      "ringScale": 0.5,
+      "rings": [
+        {
+          "id": "ring1",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "angle": -135
+        },
+        {
+          "id": "ring2",
+          "position": {
+            "x": 140,
+            "y": 140
+          },
+          "angle": -45
+        },
+        {
+          "id": "ring3",
+          "position": {
+            "x": 0,
+            "y": 279
+          },
+          "angle": 0
+        },
+        {
+          "id": "ring4",
+          "position": {
+            "x": -140,
+            "y": -140
+          },
+          "angle": 135
+        },
+        {
+          "id": "ring5",
+          "position": {
+            "x": 0,
+            "y": -280
+          },
+          "angle": -135
+        }
+      ],
+      "buckles": [
+        {
+          "id": "buckle1",
+          "ringId": "ring1",
+          "angle": -90,
+          "linkedRingId": "ring2"
+        },
+        {
+          "id": "buckle5",
+          "ringId": "ring1",
+          "angle": 90,
+          "linkedRingId": "ring4"
+        },
+        {
+          "id": "buckle1",
+          "ringId": "ring2",
+          "angle": -90,
+          "linkedRingId": "ring3"
+        },
+        {
+          "id": "buckle1",
+          "ringId": "ring4",
+          "angle": -90,
+          "linkedRingId": "ring5"
+        }
+      ],
+      "rocks": [],
+      "bombs": []
+  },
   6: { id: 6, name: 'Level 6', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
   7: { id: 7, name: 'Level 7', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
   8: { id: 8, name: 'Level 8', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
