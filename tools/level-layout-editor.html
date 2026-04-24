@@ -321,28 +321,6 @@
       ctx.font = "12px Arial";
       ctx.fillText(r.id, c.x - 16, c.y + 4);
 
-      // draw active buckles (position + size + rotation) to match prefab behavior
-      for (const b of r.buckles) {
-        const wp = getBuckleWorldPoint(r, b.angle);
-        const p = worldToCanvas(wp);
-        const rz = b.angle + r.angle;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate((-rz * Math.PI) / 180); // world y-up -> canvas y-down
-        ctx.fillStyle = "#f2f2f2";
-        ctx.strokeStyle = "#222";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.rect(
-          -BUCKLE_RENDER_SIZE.w * 0.5,
-          -BUCKLE_RENDER_SIZE.h * 0.5,
-          BUCKLE_RENDER_SIZE.w,
-          BUCKLE_RENDER_SIZE.h
-        );
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
     }
 
     function getRingGapWorldPoint(ring) {
@@ -377,6 +355,7 @@
         drawRing(r, color, overlapSet.has(r.id), r.id === state.selectedRingId);
       });
       drawRocks();
+      drawBucklesOnTop();
 
       updateCanvasInteractionHint();
 
@@ -387,6 +366,57 @@
         el.overlapStatus.className = "ok";
         el.overlapStatus.textContent = "无重叠";
       }
+    }
+
+    function drawBucklesOnTop() {
+      for (const ring of state.rings) {
+        for (const buckle of ring.buckles) {
+          drawBuckle(ring, buckle.angle);
+        }
+      }
+    }
+
+    function drawBuckle(ring, buckleAngle) {
+      const wp = getBuckleWorldPoint(ring, buckleAngle);
+      const p = worldToCanvas(wp);
+      const rz = buckleAngle + ring.angle;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((-rz * Math.PI) / 180); // world y-up -> canvas y-down
+      ctx.fillStyle = "rgba(242, 242, 242, 0.55)";
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(
+        -BUCKLE_RENDER_SIZE.w * 0.5,
+        -BUCKLE_RENDER_SIZE.h * 0.5,
+        BUCKLE_RENDER_SIZE.w,
+        BUCKLE_RENDER_SIZE.h
+      );
+      ctx.fill();
+      ctx.stroke();
+      drawBuckleArrow();
+      ctx.restore();
+    }
+
+    function drawBuckleArrow() {
+      const arrowStartY = BUCKLE_RENDER_SIZE.h * 0.22;
+      const arrowEndY = -BUCKLE_RENDER_SIZE.h * 0.30;
+      const arrowHead = Math.max(6, BUCKLE_RENDER_SIZE.w * 0.22);
+      ctx.strokeStyle = "#ff8a00";
+      ctx.fillStyle = "#ff8a00";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, arrowStartY);
+      ctx.lineTo(0, arrowEndY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, arrowEndY);
+      ctx.lineTo(-arrowHead * 0.5, arrowEndY + arrowHead * 0.75);
+      ctx.lineTo(arrowHead * 0.5, arrowEndY + arrowHead * 0.75);
+      ctx.closePath();
+      ctx.fill();
     }
 
     function drawRocks() {
@@ -707,7 +737,6 @@
 
       return [
         `  ${levelKey}: {`,
-        `    id: ${cfg.id},`,
         `    name: ${toTsSingleQuotedString(cfg.name)},`,
         `    ringScale: ${cfg.ringScale},`,
         `    rings: [`,
@@ -724,7 +753,7 @@
 
     function exportRepoSnippet() {
       const cfg = exportConfigObject();
-      const levelKey = Number(cfg.id) || 1;
+      const levelKey = Math.max(1, Math.round(Number(el.levelId.value) || 1));
       return formatLevelConfigSnippet(levelKey, cfg);
     }
 
@@ -753,7 +782,7 @@
         throw new Error(`导入失败：配置语法错误（${err?.message || String(err)}）`);
       }
 
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Number.isFinite(parsed.id)) {
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Array.isArray(parsed.rings)) {
         return parsed;
       }
 
@@ -768,7 +797,6 @@
 
     function validateImportedConfig(cfg) {
       if (!cfg || typeof cfg !== "object") throw new Error("导入失败：配置不是对象");
-      if (!Number.isFinite(Number(cfg.id))) throw new Error("导入失败：id 非法");
       if (typeof cfg.name !== "string" || !cfg.name.trim()) throw new Error("导入失败：name 非法");
       if (!Number.isFinite(Number(cfg.ringScale)) || Number(cfg.ringScale) <= 0) {
         throw new Error("导入失败：ringScale 非法");
@@ -831,7 +859,6 @@
         return { id: bomb.id, ringId: bomb.ringId, countdown: Math.round(countdown) };
       });
 
-      el.levelId.value = String(Math.round(Number(cfg.id)));
       el.levelName.value = String(cfg.name);
       el.ringScale.value = String(Number(cfg.ringScale));
       state.ringScale = Number(cfg.ringScale);

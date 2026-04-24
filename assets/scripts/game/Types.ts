@@ -26,7 +26,6 @@ export interface BombConfig {
 }
 
 export interface LevelConfig {
-  id: number;
   name: string;
   ringScale: number;
   rings: RingConfig[];

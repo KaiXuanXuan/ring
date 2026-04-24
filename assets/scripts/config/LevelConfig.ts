@@ -2,7 +2,6 @@ import { LevelConfig } from '../game/Types';
 
 export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   1: {
-    id: 1,
     name: 'Level 1',
     ringScale: 0.5,
     rings: [
@@ -18,7 +17,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   2: {
-    id: 2,
     name: 'Level 2',
     ringScale: 0.5,
     rings: [
@@ -36,7 +34,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   3: {
-    id: 3,
     name: 'Level 3',
     ringScale: 0.5,
     rings: [
@@ -54,7 +51,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   4: {
-    id: 4,
     name: 'Level 4',
     ringScale: 0.5,
     rings: [
@@ -72,7 +68,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [{ id: 'bomb1', ringId: 'ring3', countdown: 30 }],
   },
   5: {
-    id: 5,
     name: 'Level 5',
     ringScale: 0.5,
     rings: [
@@ -92,7 +87,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   6: {
-    id: 6,
     name: 'Level 6',
     ringScale: 0.5,
     rings: [
@@ -112,7 +106,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [{ id: 'bomb1', ringId: 'ring5', countdown: 30 }],
   },
   7: {
-    id: 7,
     name: 'Level 7',
     ringScale: 0.5,
     rings: [
@@ -138,7 +131,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [{ id: 'bomb1', ringId: 'ring1', countdown: 30 }],
   },
   8: {
-    id: 8,
     name: 'Level 8',
     ringScale: 0.5,
     rings: [
@@ -164,7 +156,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   9: {
-    id: 9,
     name: 'Level 9',
     ringScale: 0.4,
     rings: [
@@ -198,7 +189,6 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     bombs: [],
   },
   10: {
-    id: 10,
     name: 'Level 10',
     ringScale: 0.3,
     rings: [
