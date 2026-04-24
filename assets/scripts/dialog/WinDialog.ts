@@ -24,24 +24,25 @@ export class WinDialog extends Component {
 
   @property(Node)
   levelLabel: Node | null = null; // Level label node
-  private readonly onOpenDialogHandler = this.onOpenDialog.bind(this);
+
+  private readonly onUpdateLevelLabelHandler = this.onUpdateLevelLabel.bind(this);
 
   onLoad(): void {
     this.setupButton(this.backBtn, this.onBackClick.bind(this));
     this.setupButton(this.nextBtn, this.onNextClick.bind(this));
 
     // Register for events
-    GM.event.on('openWinDialog', this.onOpenDialogHandler);
+    GM.event.on('updateLevelLabel', this.onUpdateLevelLabelHandler);
   }
 
   onDestroy(): void {
-    GM.event.off('openWinDialog', this.onOpenDialogHandler);
+    GM.event.off('updateLevelLabel', this.onUpdateLevelLabelHandler);
   }
 
   /**
-   * Handle dialog open event
+   * Handle update level label event
    */
-  private onOpenDialog(data: { level?: number; nextLevel?: number } = {}): void {
+  private onUpdateLevelLabel(data: { level?: number; nextLevel?: number } = {}): void {
     // Update level display
     if (this.levelLabel) {
       const label = this.levelLabel.getComponent(Label);

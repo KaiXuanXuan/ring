@@ -195,6 +195,7 @@ export class Main extends Component {
     AdService.reportLvFinish(this.currentLevel);
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
+      GM.event.emit('updateLevelLabel', { level: this.currentLevel, nextLevel });
     });
   }
 
