@@ -4,6 +4,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   1: {
     id: 1,
     name: 'Level 1',
+    ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: -140 }, angle: 180 },
       { id: 'ring2', position: { x: -140, y: 0 }, angle: 45 },
@@ -19,6 +20,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   2: {
     id: 2,
     name: 'Level 2',
+    ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: 0 }, angle: 180 },
       { id: 'ring2', position: { x: -200, y: 0 }, angle: 90 },
@@ -36,6 +38,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   3: {
     id: 3,
     name: 'Level 3',
+    ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: -140 }, angle: 180 },
       { id: 'ring2', position: { x: -140, y: 0 }, angle: 45 },
@@ -53,6 +56,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   4: {
     id: 4,
     name: 'Level 4',
+    ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: -200, y: 0 }, angle: 90 },
       { id: 'ring2', position: { x: 0, y: 0 }, angle: 0 },
@@ -69,12 +73,12 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     rocks: [{ id: 'rock1', ringId: 'ring4' }],
     bombs: [{ id: 'bomb1', ringId: 'ring5', countdown: 30 }],
   },
-  5: { id: 5, name: 'Level 5', rings: [], buckles: [], rocks: [], bombs: [] },
-  6: { id: 6, name: 'Level 6', rings: [], buckles: [], rocks: [], bombs: [] },
-  7: { id: 7, name: 'Level 7', rings: [], buckles: [], rocks: [], bombs: [] },
-  8: { id: 8, name: 'Level 8', rings: [], buckles: [], rocks: [], bombs: [] },
-  9: { id: 9, name: 'Level 9', rings: [], buckles: [], rocks: [], bombs: [] },
-  10: { id: 10, name: 'Level 10', rings: [], buckles: [], rocks: [], bombs: [] },
+  5: { id: 5, name: 'Level 5', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  6: { id: 6, name: 'Level 6', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  7: { id: 7, name: 'Level 7', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  8: { id: 8, name: 'Level 8', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  9: { id: 9, name: 'Level 9', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
+  10: { id: 10, name: 'Level 10', ringScale: 0.5, rings: [], buckles: [], rocks: [], bombs: [] },
 };
 
 export function getLevelConfig(id: number): LevelConfig {

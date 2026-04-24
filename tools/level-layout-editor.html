@@ -29,7 +29,7 @@
   <div class="app">
     <div class="panel">
       <h2>Ring 关卡布局编辑器</h2>
-      <div class="small">拖拽右侧圆环调整位置，自动检查重叠。导出可直接粘贴到 `Repo.ts`。</div>
+      <div class="small">拖拽右侧圆环调整位置，自动检查重叠。导出可直接粘贴到 `LevelConfig.ts`。</div>
 
       <h3>关卡信息</h3>
       <div class="row">
@@ -39,6 +39,14 @@
       <div class="row">
         <label>名称</label>
         <input id="levelName" type="text" value="Level 1" />
+      </div>
+      <div class="row">
+        <label>Ring缩放</label>
+        <select id="ringScale">
+          <option value="0.5">0.5</option>
+          <option value="0.4">0.4</option>
+          <option value="0.3">0.3</option>
+        </select>
       </div>
 
       <h3>全局参数</h3>
@@ -71,7 +79,7 @@
 
       <h3>导出</h3>
       <div class="row">
-        <button id="exportRepoBtn">导出 Repo（自动复制）</button>
+        <button id="exportRepoBtn">导出 LevelConfig 片段（自动复制）</button>
       </div>
     </div>
 
@@ -89,9 +97,8 @@
     // 与 Ring.prefab 中 Buckles/Buckle1..5 的朝向定义一致（按节点名映射）
     const SLOT_ANGLE = { buckle1: -90, buckle2: -45, buckle3: 0, buckle4: 45, buckle5: 90 };
     // 与项目运行时保持一致：
-    // Ring.prefab 基准半径 180，运行时缩放 0.5 -> 实际布局/判定半径 90
+    // Ring.prefab 基准半径 180，运行时缩放由关卡配置控制（0.5/0.4/0.3）
     const RING_PREFAB_BASE_RADIUS = 180;
-    const RING_SCALE = 0.5;
     // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 angle 与 Runtime 根节点 Z 旋转一一对应（不做额外偏移）
     // Ring.prefab 中 Buckles/Buckle1..5 的局部坐标（以 Ring 根节点为参考）
     const BUCKLE_LOCAL_POS = {
@@ -114,6 +121,7 @@
         { id: "ring2", position: { x: 0, y: 0 }, angle: 0, buckles: [] },
         { id: "ring3", position: { x: 140, y: 0 }, angle: 0, buckles: [] },
       ],
+      ringScale: 0.5,
       rocks: [],
       bombs: [],
       dragRingId: null,
@@ -126,6 +134,7 @@
     const el = {
       levelId: document.getElementById("levelId"),
       levelName: document.getElementById("levelName"),
+      ringScale: document.getElementById("ringScale"),
       addRingBtn: document.getElementById("addRingBtn"),
       autoSpreadBtn: document.getElementById("autoSpreadBtn"),
       overlapStatus: document.getElementById("overlapStatus"),
@@ -165,7 +174,7 @@
     }
 
     function getRadius() {
-      return RING_PREFAB_BASE_RADIUS * RING_SCALE;
+      return RING_PREFAB_BASE_RADIUS * state.ringScale;
     }
     resizeCanvas();
 
@@ -441,7 +450,7 @@
       const center = getRenderCenter(ring);
       const lp = BUCKLE_LOCAL_POS[slotId];
       if (!lp) return { x: center.x, y: center.y };
-      const scaled = { x: lp.x * RING_SCALE, y: lp.y * RING_SCALE };
+      const scaled = { x: lp.x * state.ringScale, y: lp.y * state.ringScale };
       const w = rotateYUp(scaled, ring.angle);
       return { x: center.x + w.x, y: center.y + w.y };
     }
@@ -553,6 +562,7 @@
       return {
         id: Number(el.levelId.value) || 1,
         name: el.levelName.value || `Level ${el.levelId.value || 1}`,
+        ringScale: state.ringScale,
         rings: state.rings.map(r => ({
           id: r.id,
           position: { x: Math.round(r.position.x), y: Math.round(r.position.y) },
@@ -658,7 +668,16 @@
         alert(`复制失败: ${err?.message || String(err)}`);
         return;
       }
-      alert("已复制 Repo 片段到剪贴板");
+      alert("已复制 LevelConfig 片段到剪贴板");
+    });
+
+    el.ringScale.addEventListener("change", (e) => {
+      const value = Number(e.target.value);
+      if (value !== 0.5 && value !== 0.4 && value !== 0.3) {
+        throw new Error(`非法缩放值: ${e.target.value}`);
+      }
+      state.ringScale = value;
+      render();
     });
 
     function pickRingAtWorld(p) {
