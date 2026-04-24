@@ -189,13 +189,14 @@ export class Main extends Component {
   private async onOpenWinDialog(): Promise<void> {
     GM.event.emit('pauseGame');
     const unlockedLevel = Number(window.GM?.data?.getState('unlockedLevel') ?? 1);
-    const nextLevel = Math.min(this.currentLevel + 1, MAX_LEVEL);
+    const nextLevel = this.currentLevel + 1;
+    const nextEffectiveLevel = Math.min(nextLevel, MAX_LEVEL);
     const nextUnlockedLevel = Math.max(unlockedLevel, nextLevel);
     window.GM?.data?.setState({ unlockedLevel: nextUnlockedLevel });
     AdService.reportLvFinish(this.currentLevel);
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
-      GM.event.emit('updateLevelLabel', { level: this.currentLevel, nextLevel });
+      GM.event.emit('updateLevelLabel', { level: this.currentLevel, nextLevel: nextEffectiveLevel });
     });
   }
 

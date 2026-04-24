@@ -9,7 +9,6 @@ export interface RingConfig {
 }
 
 export interface BuckleConfig {
-  id: string;
   ringId: string;
   angle: number;
   linkedRingId?: string;

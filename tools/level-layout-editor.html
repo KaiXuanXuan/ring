@@ -91,29 +91,22 @@
       <div id="canvasHint" class="canvas-hint" aria-live="polite"></div>
       <div class="hint">
         左键点选 / 拖拽移动 | 中键拖拽旋转 Angle | 红色表示与其他 Ring 重叠<br/>
-        Angle：0°=缺口朝上（逆时针为正）；导出字段为 `angle`（与 Ring.prefab 默认朝向一致）。槽位：`buckle1=-90` … `buckle5=90`
+        Angle：0°=缺口朝上（逆时针为正）；导出字段为 `angle`（与 Ring.prefab 默认朝向一致）。Buckle 支持 -135°~135° 任意角度
       </div>
     </div>
   </div>
 
   <script>
-    // 与 Ring.prefab 中 Buckles/Buckle1..5 的朝向定义一致（按节点名映射）
-    const SLOT_ANGLE = { buckle1: -90, buckle2: -45, buckle3: 0, buckle4: 45, buckle5: 90 };
     // 与项目运行时保持一致：
     // Ring.prefab 基准半径 180，运行时缩放由关卡配置控制
     const RING_PREFAB_BASE_RADIUS = 180;
     // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 angle 与 Runtime 根节点 Z 旋转一一对应（不做额外偏移）
-    // Ring.prefab 中 Buckles/Buckle1..5 的局部坐标（以 Ring 根节点为参考）
-    const BUCKLE_LOCAL_POS = {
-      buckle1: { x: -250, y: 0 },
-      buckle2: { x: -170, y: -170 },
-      buckle3: { x: 0, y: -240 },
-      buckle4: { x: 170, y: -170 },
-      buckle5: { x: 250, y: 0 },
-    };
+    // Buckle 连续角度参数（与 Runtime Buckle.ts 保持一致）
+    const BUCKLE_LOCAL_RADIUS = 245;
+    const BUCKLE_MIN_ANGLE = -135;
+    const BUCKLE_MAX_ANGLE = 135;
     // 与 Runtime.ringCenterOffsetX/Y 一致：配置坐标到可视中心的偏移
     const RING_CENTER_OFFSET = { x: 0, y: 20 };
-    const SLOT_KEYS = Object.keys(SLOT_ANGLE);
     // 普通环颜色池（排除红色），红色仅用于重叠警示
     const RING_COLORS = ["#4ecdc4", "#5b8cff", "#b06bff", "#ffd166", "#3ddc97", "#7bdff2", "#8bc34a"];
     const RING_STROKE_WIDTH = 24;
@@ -330,7 +323,7 @@
 
       // draw active buckles (position + size + rotation) to match prefab behavior
       for (const b of r.buckles) {
-        const wp = getBuckleWorldPoint(r, b.id);
+        const wp = getBuckleWorldPoint(r, b.angle);
         const p = worldToCanvas(wp);
         const rz = b.angle + r.angle;
         ctx.save();
@@ -467,11 +460,10 @@
         <div class="row"><label>X</label><input data-k="x" type="number" value="${r.position.x}"></div>
         <div class="row"><label>Y</label><input data-k="y" type="number" value="${r.position.y}"></div>
         <div class="row"><label>Angle</label><input data-k="angle" type="number" value="${r.angle}" title="0=缺口朝上，逆时针为正；导出为 angle"></div>
-        <div class="small">Buckle（只选择参与判定的槽位，关联 Ring 自动推导）</div>
+        <div class="small">Buckle（范围 -135~135，支持任意角度，关联 Ring 自动推导）</div>
         <div class="row">
-          <select data-k="slot">
-            ${SLOT_KEYS.map(k => `<option value="${k}">${k} (${SLOT_ANGLE[k]}°)</option>`).join("")}
-          </select>
+          <label>Angle</label>
+          <input data-k="buckleAngle" type="number" value="0" min="${BUCKLE_MIN_ANGLE}" max="${BUCKLE_MAX_ANGLE}" step="1">
           <button data-act="addBuckle">添加</button>
         </div>
         <div data-k="buckleList"></div>
@@ -491,13 +483,9 @@
       });
       box.querySelector('[data-act="addBuckle"]').addEventListener("click", () => {
         pushUndoSnapshot();
-        const slot = box.querySelector('[data-k="slot"]').value;
-        const exists = r.buckles.find(b => b.id === slot);
-        if (exists) {
-          // already selected, keep as-is
-        } else {
-          r.buckles.push({ id: slot, angle: SLOT_ANGLE[slot] });
-        }
+        const angleValue = Number(box.querySelector('[data-k="buckleAngle"]').value);
+        assertValidBuckleAngle(angleValue);
+        r.buckles.push({ angle: angleValue });
         refreshEditors();
       });
 
@@ -506,7 +494,7 @@
         const item = document.createElement("div");
         item.className = "row";
         item.innerHTML = `
-          <span>${b.id} (${b.angle}°)</span>
+          <span>${b.angle}°</span>
           <button data-rm="${idx}">移除</button>
         `;
         item.querySelector("button").addEventListener("click", () => {
@@ -530,17 +518,34 @@
       return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
     }
 
-    function getBuckleWorldPoint(ring, slotId) {
+    function assertValidBuckleAngle(angle) {
+      if (!Number.isFinite(angle)) {
+        throw new Error(`Buckle angle 非法: ${angle}`);
+      }
+      if (angle < BUCKLE_MIN_ANGLE || angle > BUCKLE_MAX_ANGLE) {
+        throw new Error(`Buckle angle 超出范围(${BUCKLE_MIN_ANGLE}~${BUCKLE_MAX_ANGLE}): ${angle}`);
+      }
+    }
+
+    function getBuckleLocalPosByAngle(angle) {
+      assertValidBuckleAngle(angle);
+      const rad = ((angle - 90) * Math.PI) / 180;
+      return {
+        x: Math.cos(rad) * BUCKLE_LOCAL_RADIUS,
+        y: Math.sin(rad) * BUCKLE_LOCAL_RADIUS,
+      };
+    }
+
+    function getBuckleWorldPoint(ring, buckleAngle) {
       const center = getRenderCenter(ring);
-      const lp = BUCKLE_LOCAL_POS[slotId];
-      if (!lp) return { x: center.x, y: center.y };
+      const lp = getBuckleLocalPosByAngle(buckleAngle);
       const scaled = { x: lp.x * state.ringScale, y: lp.y * state.ringScale };
       const w = rotateYUp(scaled, ring.angle);
       return { x: center.x + w.x, y: center.y + w.y };
     }
 
-    function inferLinkedRingId(sourceRing, slotId) {
-      const p = getBuckleWorldPoint(sourceRing, slotId);
+    function inferLinkedRingId(sourceRing, buckleAngle) {
+      const p = getBuckleWorldPoint(sourceRing, buckleAngle);
       const radius = getRadius();
       let bestId = undefined;
       let bestErr = Number.POSITIVE_INFINITY;
@@ -637,9 +642,9 @@
       const exportedBuckles = [];
       for (const r of state.rings) {
         for (const b of r.buckles) {
-          const linkedRingId = inferLinkedRingId(r, b.id);
+          assertValidBuckleAngle(Number(b.angle));
+          const linkedRingId = inferLinkedRingId(r, b.angle);
           exportedBuckles.push({
-            id: b.id,
             ringId: r.id,
             angle: b.angle,
             ...(linkedRingId ? { linkedRingId } : {})
@@ -685,7 +690,7 @@
         const linkedPart = buckle.linkedRingId
           ? `, linkedRingId: ${toTsSingleQuotedString(buckle.linkedRingId)}`
           : "";
-        return `      { id: ${toTsSingleQuotedString(buckle.id)}, ringId: ${toTsSingleQuotedString(buckle.ringId)}, angle: ${buckle.angle}${linkedPart} },`;
+        return `      { ringId: ${toTsSingleQuotedString(buckle.ringId)}, angle: ${buckle.angle}${linkedPart} },`;
       });
 
       const rocks = formatInlineObjectArray(
@@ -794,14 +799,14 @@
 
       for (const buckle of cfg.buckles) {
         if (!buckle || typeof buckle !== "object") throw new Error("导入失败：buckle 条目非法");
-        if (typeof buckle.id !== "string" || !buckle.id) throw new Error("导入失败：buckle.id 非法");
         if (typeof buckle.ringId !== "string" || !ringIds.has(buckle.ringId)) {
           throw new Error(`导入失败：buckle.ringId 非法: ${buckle?.ringId}`);
         }
-        if (!Number.isFinite(Number(buckle.angle))) throw new Error(`导入失败：buckle.angle 非法: ${buckle.id}`);
+        if (!Number.isFinite(Number(buckle.angle))) throw new Error(`导入失败：buckle.angle 非法: ${buckle.ringId}`);
+        assertValidBuckleAngle(Number(buckle.angle));
         const ring = rings.find((x) => x.id === buckle.ringId);
         if (!ring) throw new Error(`导入失败：找不到 buckle 绑定 ring: ${buckle.ringId}`);
-        ring.buckles.push({ id: buckle.id, angle: Number(buckle.angle) });
+        ring.buckles.push({ angle: Number(buckle.angle) });
       }
 
       const rocks = cfg.rocks.map((rock) => {

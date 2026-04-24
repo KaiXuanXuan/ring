@@ -658,13 +658,14 @@ export class Runtime extends Component {
     const buckleNodes: Node[] = [];
     const buckleComps: Buckle[] = [];
 
-    for (const cfg of configs) {
+    for (let i = 0; i < configs.length; i++) {
+      const cfg = configs[i];
       const buckleNode = instantiate(this.bucklePrefab);
       const buckleComp = buckleNode.getComponent(Buckle);
       if (!buckleComp) {
         throw new Error('bucklePrefab 缺少 Buckle 组件');
       }
-      buckleComp.setup(cfg, this.ringScale);
+      buckleComp.setup(cfg, this.ringScale, i + 1);
       buckleNode.active = true;
       this.buckleLayer.addChild(buckleNode);
       buckleNodes.push(buckleNode);

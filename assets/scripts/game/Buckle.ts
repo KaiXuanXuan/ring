@@ -6,26 +6,29 @@ const { ccclass } = _decorator;
 @ccclass('Buckle')
 export class Buckle extends Component {
   private static readonly RENDER_PRIORITY = 2000;
-  private static readonly SLOT_LOCAL_POS: Record<string, Vec3> = {
-    buckle1: new Vec3(-245, 0, 0),
-    buckle2: new Vec3(-170, -170, 0),
-    buckle3: new Vec3(0, -240, 0),
-    buckle4: new Vec3(170, -170, 0),
-    buckle5: new Vec3(245, 0, 0),
-  };
+  private static readonly LOCAL_RADIUS = 245;
+  private static readonly MIN_ANGLE = -135;
+  private static readonly MAX_ANGLE = 135;
 
   private cfg: BuckleConfig | null = null;
   private localPos: Vec3 = new Vec3();
 
-  setup(cfg: BuckleConfig, ringScale: number): void {
+  setup(cfg: BuckleConfig, ringScale: number, index: number): void {
     this.cfg = cfg;
-    const lp = Buckle.SLOT_LOCAL_POS[cfg.id];
-    if (!lp) {
-      throw new Error(`未知 Buckle 槽位: ${cfg.id}`);
+    if (!Number.isFinite(cfg.angle)) {
+      throw new Error(`Buckle angle 非法: ${cfg.angle}`);
     }
-    this.localPos = lp.clone();
+    if (cfg.angle < Buckle.MIN_ANGLE || cfg.angle > Buckle.MAX_ANGLE) {
+      throw new Error(`Buckle angle 超出范围(${Buckle.MIN_ANGLE}~${Buckle.MAX_ANGLE}): ${cfg.angle}`);
+    }
+    const angleRad = ((cfg.angle - 90) * Math.PI) / 180;
+    this.localPos = new Vec3(
+      Math.cos(angleRad) * Buckle.LOCAL_RADIUS,
+      Math.sin(angleRad) * Buckle.LOCAL_RADIUS,
+      0
+    );
     this.node.setScale(ringScale, ringScale, 1);
-    this.node.name = `${cfg.ringId}-${cfg.id}`;
+    this.node.name = `${cfg.ringId}-buckle-${index}`;
     this.raisePriority();
   }
 
