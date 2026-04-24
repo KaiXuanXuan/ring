@@ -1,4 +1,4 @@
-import { _decorator, Component, EventTouch, Node, Prefab, UITransform, Vec3, instantiate, tween } from 'cc';
+import { _decorator, Component, EventTouch, Layout, Node, Prefab, UITransform, Vec3, instantiate, tween } from 'cc';
 import { getAllLevelIds } from '../config/LevelConfig';
 import { LevelCard } from './LevelCard';
 import { PagePoint } from './PagePoint';
@@ -120,6 +120,20 @@ export class LevelSelection extends Component {
       throw new Error('LevelSelection.renderPoints 调用时缺少必要绑定');
     }
     PagePoint.render(this.pagePointContainer, this.pagePointPrefab, this.totalPages, this.currentPage);
+    this.applyPagePointContainerLayout();
+  }
+
+  private applyPagePointContainerLayout(): void {
+    if (!this.pagePointContainer) {
+      return;
+    }
+    const layout = this.pagePointContainer.getComponent(Layout);
+    if (layout) {
+      layout.resizeMode = Layout.ResizeMode.CONTAINER;
+      layout.updateLayout(true);
+    }
+    const p = this.pagePointContainer.position;
+    this.pagePointContainer.setPosition(0, p.y, p.z);
   }
 
   private onTouchStart(event: EventTouch): void {
