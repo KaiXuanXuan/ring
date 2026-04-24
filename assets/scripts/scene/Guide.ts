@@ -54,10 +54,8 @@ export class Guide extends Component {
   private tipFrameStep1: SpriteFrame | null = null;
   private tipFrameStep2: SpriteFrame | null = null;
   private tipFramesReady = false;
-  private pendingLevel1Guide = false;
   private countdownPausedByGuide = false;
   private firstBombLevel = -1;
-  private bombGuideDialogOpening = false;
   private readonly onStartLevelHandler = () => {
     this.checkLevelGuide();
   };
@@ -71,7 +69,6 @@ export class Guide extends Component {
 
   private readonly onGuideDialogClosedHandler = () => {
     this.resumeCountdown();
-    this.bombGuideDialogOpening = false;
   };
 
   onLoad(): void {
@@ -82,7 +79,6 @@ export class Guide extends Component {
     GM.event.on('ringReleased', this.onRingReleasedHandler);
     GM.event.on('guideDialogClosed', this.onGuideDialogClosedHandler);
     input.on(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
-    this.checkLevelGuide();
     this.initTipFrames();
   }
 
@@ -111,13 +107,11 @@ export class Guide extends Component {
   private checkLevelGuide(): void {
     const level = Number(GM?.data?.getState('currentLevel') ?? 1);
     if (level === 1) {
-      this.pendingLevel1Guide = true;
       if (this.tipFramesReady) {
         this.startGuide();
-        this.pendingLevel1Guide = false;
       }
+      return;
     } else {
-      this.pendingLevel1Guide = false;
       this.stopGuide();
     }
 
@@ -125,17 +119,12 @@ export class Guide extends Component {
       void this.openGuideDialog();
       return;
     }
-    this.bombGuideDialogOpening = false;
-    this.resumeCountdown();
   }
 
   private async openGuideDialog(): Promise<void> {
-    if (this.bombGuideDialogOpening) return;
-    this.bombGuideDialogOpening = true;
     this.pauseCountdown();
     const dialogNode = await GM.dialog.open({ path: this.guideDialogPath });
     if (!dialogNode) {
-      this.bombGuideDialogOpening = false;
       this.resumeCountdown();
       throw new Error(`[Guide] Failed to open dialog: ${this.guideDialogPath}`);
     }
