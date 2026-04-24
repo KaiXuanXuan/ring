@@ -6,7 +6,7 @@
  */
 
 import { _decorator, Component, Node } from 'cc';
-import { Repo } from '../game/Repo';
+import { getLevelConfig } from '../config/LevelConfig';
 import { Runtime } from '../game/Runtime';
 import { Level } from '../game/Level';
 import { AdService } from '../service/AdService';
@@ -51,8 +51,6 @@ export class Main extends Component {
   private readonly onAddTimeHandler = this.onAddTime.bind(this);
 
   onLoad(): void {
-    // Initialize level repository
-    Repo.init();
     AdService.showSplash();
 
     // Register GM event listeners
@@ -149,7 +147,7 @@ export class Main extends Component {
     if (!this.levelLabel) return;
 
     try {
-      Repo.get(level);
+      getLevelConfig(level);
       const label = this.levelLabel.getComponent('cc.Label') as any;
       if (label) {
         label.string = `level: ${level}`;

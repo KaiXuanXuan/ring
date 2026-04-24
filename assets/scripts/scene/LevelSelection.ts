@@ -1,5 +1,5 @@
 import { _decorator, Component, EventTouch, Node, Prefab, UITransform, Vec3, instantiate, tween } from 'cc';
-import { Repo } from '../game/Repo';
+import { getAllLevelIds } from '../config/LevelConfig';
 import { LevelCard } from './LevelCard';
 import { PagePoint } from './PagePoint';
 
@@ -45,8 +45,7 @@ export class LevelSelection extends Component {
       throw new Error(`LevelSelection.pageWidth 非法: ${this.pageWidth}`);
     }
 
-    Repo.init();
-    this.levelIds = Repo.getAllIds().sort((a, b) => a - b);
+    this.levelIds = getAllLevelIds().sort((a, b) => a - b);
     if (this.levelIds.length === 0) {
       throw new Error('LevelSelection 没有可用关卡');
     }

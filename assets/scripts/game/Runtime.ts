@@ -3,9 +3,9 @@
  */
 
 import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, UIOpacity, Label } from 'cc';
+import { getLevelConfig } from '../config/LevelConfig';
 import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds, isRingConstrained } from './Rules';
-import { Repo } from './Repo';
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
 import { Bomb } from './Bomb';
@@ -62,7 +62,7 @@ export class Runtime extends Component {
     if (!this.bombPrefab) {
       throw new Error('Runtime 缺少 bombPrefab 绑定');
     }
-    const config = Repo.get(level);
+    const config = getLevelConfig(level);
     this.areaNode = areaNode;
     this.ensureBuckleLayer();
     this.state = this.createState(config);

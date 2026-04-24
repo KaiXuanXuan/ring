@@ -6,7 +6,7 @@
  */
 
 import { _decorator, Component, Node, Button, Label } from 'cc';
-import { Repo } from '../game/Repo';
+import { getLevelConfig } from '../config/LevelConfig';
 import { LevelConfig } from '../game/Types';
 
 const { ccclass, property } = _decorator;
@@ -81,7 +81,7 @@ export class WinDialog extends Component {
   private hasPlayableLevel(level: number): boolean {
     let cfg: LevelConfig;
     try {
-      cfg = Repo.get(level);
+      cfg = getLevelConfig(level);
     } catch {
       return false;
     }

@@ -19,7 +19,7 @@ import {
   input,
   resources,
 } from 'cc';
-import { Repo } from '../game/Repo';
+import { getFirstBombLevelId } from '../config/LevelConfig';
 
 const { ccclass, property } = _decorator;
 
@@ -72,7 +72,7 @@ export class Guide extends Component {
   };
 
   onLoad(): void {
-    this.firstBombLevel = Repo.getFirstBombLevelId();
+    this.firstBombLevel = getFirstBombLevelId();
     this.setupGuideNodes();
     this.node.active = false;
     GM.event.on('startLevel', this.onStartLevelHandler);
