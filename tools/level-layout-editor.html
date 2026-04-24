@@ -158,6 +158,58 @@
 
     const ctx = el.stage.getContext("2d");
     const FIXED_GAP_SIZE = 45;
+    const MAX_UNDO_STEPS = 100;
+    const undoStack = [];
+    let dragUndoRecorded = false;
+    let rotateUndoRecorded = false;
+
+    function clonePlain(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function getEditableSnapshot() {
+      return {
+        levelId: String(el.levelId.value),
+        levelName: String(el.levelName.value),
+        ringScaleInput: String(el.ringScale.value),
+        ringScale: Number(state.ringScale),
+        rings: clonePlain(state.rings),
+        rocks: clonePlain(state.rocks),
+        bombs: clonePlain(state.bombs),
+      };
+    }
+
+    function restoreEditableSnapshot(snapshot) {
+      el.levelId.value = snapshot.levelId;
+      el.levelName.value = snapshot.levelName;
+      el.ringScale.value = snapshot.ringScaleInput;
+      state.ringScale = Number(snapshot.ringScale);
+      state.rings = clonePlain(snapshot.rings);
+      state.rocks = clonePlain(snapshot.rocks);
+      state.bombs = clonePlain(snapshot.bombs);
+      state.selectedRingId = null;
+      state.dragRingId = null;
+      state.midRotateState = null;
+      refreshEditors();
+    }
+
+    function pushUndoSnapshot() {
+      const snapshot = getEditableSnapshot();
+      const last = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null;
+      if (last && JSON.stringify(last) === JSON.stringify(snapshot)) {
+        return;
+      }
+      undoStack.push(snapshot);
+      if (undoStack.length > MAX_UNDO_STEPS) {
+        undoStack.splice(0, undoStack.length - MAX_UNDO_STEPS);
+      }
+    }
+
+    function undoLastChange() {
+      if (undoStack.length === 0) return;
+      const snapshot = undoStack.pop();
+      restoreEditableSnapshot(snapshot);
+    }
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
@@ -417,10 +469,11 @@
         <div data-k="buckleList"></div>
       `;
 
-      box.querySelector('[data-k="x"]').addEventListener("input", e => { r.position.x = Number(e.target.value) || 0; render(); });
-      box.querySelector('[data-k="y"]').addEventListener("input", e => { r.position.y = Number(e.target.value) || 0; render(); });
-      box.querySelector('[data-k="angle"]').addEventListener("input", e => { r.angle = Number(e.target.value) || 0; render(); });
+      box.querySelector('[data-k="x"]').addEventListener("input", e => { pushUndoSnapshot(); r.position.x = Number(e.target.value) || 0; render(); });
+      box.querySelector('[data-k="y"]').addEventListener("input", e => { pushUndoSnapshot(); r.position.y = Number(e.target.value) || 0; render(); });
+      box.querySelector('[data-k="angle"]').addEventListener("input", e => { pushUndoSnapshot(); r.angle = Number(e.target.value) || 0; render(); });
       box.querySelector('[data-act="del"]').addEventListener("click", () => {
+        pushUndoSnapshot();
         if (state.selectedRingId === r.id) state.selectedRingId = null;
         state.rings = state.rings.filter(x => x.id !== r.id);
         state.rocks = state.rocks.filter(x => x.ringId !== r.id);
@@ -429,6 +482,7 @@
         render();
       });
       box.querySelector('[data-act="addBuckle"]').addEventListener("click", () => {
+        pushUndoSnapshot();
         const slot = box.querySelector('[data-k="slot"]').value;
         const exists = r.buckles.find(b => b.id === slot);
         if (exists) {
@@ -448,6 +502,7 @@
           <button data-rm="${idx}">移除</button>
         `;
         item.querySelector("button").addEventListener("click", () => {
+          pushUndoSnapshot();
           r.buckles.splice(idx, 1);
           refreshEditors();
         });
@@ -524,6 +579,7 @@
           </div>
         `;
         item.querySelector("button").addEventListener("click", () => {
+          pushUndoSnapshot();
           state.rocks.splice(idx, 1);
           refreshEditors();
         });
@@ -545,10 +601,12 @@
           </div>
         `;
         item.querySelector("button").addEventListener("click", () => {
+          pushUndoSnapshot();
           state.bombs.splice(idx, 1);
           refreshEditors();
         });
         item.querySelector('[data-k="countdown"]').addEventListener("input", (e) => {
+          pushUndoSnapshot();
           bomb.countdown = Number(e.target.value);
           render();
         });
@@ -786,7 +844,21 @@
       if (!ok) throw new Error("浏览器拒绝复制");
     }
 
+    async function copyExportSnippetToClipboard() {
+      if (!guardExportWhenOverlap()) return false;
+      const text = exportRepoSnippet();
+      if (location.protocol === "file:") {
+        copyTextFallback(text);
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        copyTextFallback(text);
+      }
+      return true;
+    }
+
     function autoSpread() {
+      pushUndoSnapshot();
       const r = getRadius();
       const n = Math.max(state.rings.length, 1);
       const R = Math.max(180, r * 1.8);
@@ -799,6 +871,7 @@
     }
 
     el.addRingBtn.addEventListener("click", () => {
+      pushUndoSnapshot();
       const idx = state.rings.length + 1;
       state.rings.push({
         id: `ring${idx}`,
@@ -811,6 +884,7 @@
     el.autoSpreadBtn.addEventListener("click", autoSpread);
 
     el.addRockBtn.addEventListener("click", () => {
+      pushUndoSnapshot();
       const ringId = el.rockRingSelect.value;
       if (!state.rings.find((x) => x.id === ringId)) {
         throw new Error(`新增 Rock 失败：ring 不存在: ${ringId}`);
@@ -824,6 +898,7 @@
     });
 
     el.addBombBtn.addEventListener("click", () => {
+      pushUndoSnapshot();
       const ringId = el.bombRingSelect.value;
       if (!state.rings.find((x) => x.id === ringId)) {
         throw new Error(`新增 Bomb 失败：ring 不存在: ${ringId}`);
@@ -841,16 +916,9 @@
     });
 
     el.exportRepoBtn.addEventListener("click", async () => {
-      if (!guardExportWhenOverlap()) return;
-      const text = exportRepoSnippet();
       try {
-        if (location.protocol === "file:") {
-          copyTextFallback(text);
-        } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          copyTextFallback(text);
-        }
+        const ok = await copyExportSnippetToClipboard();
+        if (!ok) return;
       } catch (err) {
         alert(`复制失败: ${err?.message || String(err)}`);
         return;
@@ -860,6 +928,7 @@
 
     el.importBtn.addEventListener("click", () => {
       try {
+        pushUndoSnapshot();
         const cfg = parseImportConfig(el.importInput.value);
         importConfigToState(cfg);
       } catch (err) {
@@ -870,6 +939,7 @@
     });
 
     el.ringScale.addEventListener("change", (e) => {
+      pushUndoSnapshot();
       const value = Number(e.target.value);
       if (!Number.isFinite(value) || value <= 0) {
         throw new Error(`非法缩放值: ${e.target.value}`);
@@ -898,6 +968,10 @@
         e.preventDefault();
         const ring = pickRingAtWorld(p);
         if (!ring) return;
+        if (!rotateUndoRecorded) {
+          pushUndoSnapshot();
+          rotateUndoRecorded = true;
+        }
         state.selectedRingId = ring.id;
         const center = getRenderCenter(ring);
         state.midRotateState = {
@@ -918,6 +992,10 @@
       }
 
       state.selectedRingId = ring.id;
+      if (!dragUndoRecorded) {
+        pushUndoSnapshot();
+        dragUndoRecorded = true;
+      }
       const center = getRenderCenter(ring);
       state.dragRingId = ring.id;
       state.dragOffset.x = center.x - p.x;
@@ -961,11 +1039,34 @@
     window.addEventListener("mouseup", (e) => {
       if (e.button === 1 && state.midRotateState) {
         state.midRotateState = null;
+        rotateUndoRecorded = false;
         render();
       }
       if (e.button === 0) {
         state.dragRingId = null;
+        dragUndoRecorded = false;
         render();
+      }
+    });
+
+    window.addEventListener("keydown", async (e) => {
+      if (!e.ctrlKey) return;
+      const key = String(e.key || "").toLowerCase();
+      if (key === "z") {
+        e.preventDefault();
+        undoLastChange();
+        return;
+      }
+      if (key === "s") {
+        e.preventDefault();
+        try {
+          const ok = await copyExportSnippetToClipboard();
+          if (ok) {
+            alert("已复制 LevelConfig 片段到剪贴板");
+          }
+        } catch (err) {
+          alert(`复制失败: ${err?.message || String(err)}`);
+        }
       }
     });
 
