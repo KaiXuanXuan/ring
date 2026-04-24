@@ -77,6 +77,13 @@
       <div class="row">
         <button id="exportRepoBtn">导出 LevelConfig 片段（自动复制）</button>
       </div>
+      <h3>导入</h3>
+      <div class="row">
+        <textarea id="importInput" rows="6" placeholder="粘贴 LevelConfig 片段，如：5: { ... }, 或 { ... }"></textarea>
+      </div>
+      <div class="row">
+        <button id="importBtn">导入到编辑器</button>
+      </div>
     </div>
 
     <div class="canvas-wrap">
@@ -143,6 +150,8 @@
       addBombBtn: document.getElementById("addBombBtn"),
       bombList: document.getElementById("bombList"),
       exportRepoBtn: document.getElementById("exportRepoBtn"),
+      importInput: document.getElementById("importInput"),
+      importBtn: document.getElementById("importBtn"),
       stage: document.getElementById("stage"),
       canvasHint: document.getElementById("canvasHint"),
     };
@@ -283,6 +292,18 @@
       }
     }
 
+    function getRingGapWorldPoint(ring) {
+      const center = getRenderCenter(ring);
+      const outerRadius = getRadius();
+      const gapMid = normalize(ring.angle + 90);
+      const rad = (gapMid * Math.PI) / 180;
+      const dist = Math.max(1, outerRadius - RING_STROKE_WIDTH * 0.5);
+      return {
+        x: center.x + Math.cos(rad) * dist,
+        y: center.y + Math.sin(rad) * dist,
+      };
+    }
+
     function render() {
       const rect = el.stage.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
@@ -297,11 +318,12 @@
 
       const pairs = overlapPairs();
       const overlapSet = new Set(pairs.flat());
+      drawBombs();
       state.rings.forEach((r, i) => {
         const color = RING_COLORS[i % RING_COLORS.length];
         drawRing(r, color, overlapSet.has(r.id), r.id === state.selectedRingId);
       });
-      drawEntities();
+      drawRocks();
 
       updateCanvasInteractionHint();
 
@@ -314,37 +336,40 @@
       }
     }
 
-    function drawEntities() {
+    function drawRocks() {
       for (const rock of state.rocks) {
         const ring = state.rings.find((x) => x.id === rock.ringId);
         if (!ring) {
           throw new Error(`Rock 绑定 ring 不存在: ${rock.ringId}`);
         }
-        const c = worldToCanvas(getRenderCenter(ring));
-        ctx.fillStyle = "#a0a0a0";
-        ctx.fillRect(c.x - 8, c.y - 8, 16, 16);
-        ctx.strokeStyle = "#1a1a1a";
-        ctx.strokeRect(c.x - 8, c.y - 8, 16, 16);
-        ctx.fillStyle = "#101010";
+        const c = worldToCanvas(getRingGapWorldPoint(ring));
+        ctx.fillStyle = "#1f3b8a";
+        ctx.fillRect(c.x - 9, c.y - 9, 18, 18);
+        ctx.strokeStyle = "#122458";
+        ctx.strokeRect(c.x - 9, c.y - 9, 18, 18);
+        ctx.fillStyle = "#dfe7ff";
         ctx.font = "10px Arial";
         ctx.fillText("R", c.x - 3, c.y + 3);
       }
+    }
 
+    function drawBombs() {
       for (const bomb of state.bombs) {
         const ring = state.rings.find((x) => x.id === bomb.ringId);
         if (!ring) {
           throw new Error(`Bomb 绑定 ring 不存在: ${bomb.ringId}`);
         }
         const c = worldToCanvas(getRenderCenter(ring));
-        ctx.fillStyle = "#ff5f5f";
+        ctx.fillStyle = "#b78656";
         ctx.beginPath();
-        ctx.arc(c.x + 16, c.y - 16, 9, 0, Math.PI * 2);
+        ctx.arc(c.x, c.y, 35, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#3a0f0f";
+        ctx.strokeStyle = "#6f4e32";
+        ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.fillStyle = "#fff";
-        ctx.font = "9px Arial";
-        ctx.fillText("B", c.x + 13, c.y - 13);
+        ctx.fillStyle = "#fff8ef";
+        ctx.font = "12px Arial";
+        ctx.fillText("B", c.x - 4, c.y + 4);
       }
     }
 
@@ -632,6 +657,122 @@
       return formatLevelConfigSnippet(levelKey, cfg);
     }
 
+    function normalizeImportText(rawText) {
+      const text = String(rawText || "").trim();
+      if (!text) {
+        throw new Error("导入失败：请输入配置文本");
+      }
+      if (text.startsWith("return ")) {
+        return text.replace(/^return\s+/, "").replace(/;$/, "").trim();
+      }
+      const keyedMatch = text.match(/^\s*\d+\s*:\s*\{[\s\S]*\}\s*,?\s*$/);
+      if (keyedMatch) {
+        const wrapped = `{${text.replace(/,\s*$/, "")}}`;
+        return `(${wrapped})`;
+      }
+      return text;
+    }
+
+    function parseImportConfig(rawText) {
+      const source = normalizeImportText(rawText);
+      let parsed;
+      try {
+        parsed = Function(`"use strict"; return (${source});`)();
+      } catch (err) {
+        throw new Error(`导入失败：配置语法错误（${err?.message || String(err)}）`);
+      }
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Number.isFinite(parsed.id)) {
+        return parsed;
+      }
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const keys = Object.keys(parsed);
+        if (keys.length === 1 && /^\d+$/.test(keys[0])) {
+          return parsed[keys[0]];
+        }
+      }
+      throw new Error("导入失败：无法识别关卡对象");
+    }
+
+    function validateImportedConfig(cfg) {
+      if (!cfg || typeof cfg !== "object") throw new Error("导入失败：配置不是对象");
+      if (!Number.isFinite(Number(cfg.id))) throw new Error("导入失败：id 非法");
+      if (typeof cfg.name !== "string" || !cfg.name.trim()) throw new Error("导入失败：name 非法");
+      if (!Number.isFinite(Number(cfg.ringScale)) || Number(cfg.ringScale) <= 0) {
+        throw new Error("导入失败：ringScale 非法");
+      }
+      if (!Array.isArray(cfg.rings) || cfg.rings.length === 0) throw new Error("导入失败：rings 不能为空");
+      if (!Array.isArray(cfg.buckles)) throw new Error("导入失败：buckles 必须是数组");
+      if (!Array.isArray(cfg.rocks)) throw new Error("导入失败：rocks 必须是数组");
+      if (!Array.isArray(cfg.bombs)) throw new Error("导入失败：bombs 必须是数组");
+    }
+
+    function importConfigToState(cfg) {
+      validateImportedConfig(cfg);
+      const rings = cfg.rings.map((ring) => {
+        if (!ring || typeof ring !== "object") throw new Error("导入失败：ring 条目非法");
+        if (typeof ring.id !== "string" || !ring.id) throw new Error("导入失败：ring.id 非法");
+        if (!ring.position || !Number.isFinite(Number(ring.position.x)) || !Number.isFinite(Number(ring.position.y))) {
+          throw new Error(`导入失败：ring.position 非法: ${ring.id}`);
+        }
+        if (!Number.isFinite(Number(ring.angle))) throw new Error(`导入失败：ring.angle 非法: ${ring.id}`);
+        return {
+          id: ring.id,
+          position: { x: Number(ring.position.x), y: Number(ring.position.y) },
+          angle: Number(ring.angle),
+          buckles: [],
+        };
+      });
+      const ringIds = new Set(rings.map((x) => x.id));
+
+      for (const buckle of cfg.buckles) {
+        if (!buckle || typeof buckle !== "object") throw new Error("导入失败：buckle 条目非法");
+        if (typeof buckle.id !== "string" || !buckle.id) throw new Error("导入失败：buckle.id 非法");
+        if (typeof buckle.ringId !== "string" || !ringIds.has(buckle.ringId)) {
+          throw new Error(`导入失败：buckle.ringId 非法: ${buckle?.ringId}`);
+        }
+        if (!Number.isFinite(Number(buckle.angle))) throw new Error(`导入失败：buckle.angle 非法: ${buckle.id}`);
+        const ring = rings.find((x) => x.id === buckle.ringId);
+        if (!ring) throw new Error(`导入失败：找不到 buckle 绑定 ring: ${buckle.ringId}`);
+        ring.buckles.push({ id: buckle.id, angle: Number(buckle.angle) });
+      }
+
+      const rocks = cfg.rocks.map((rock) => {
+        if (!rock || typeof rock !== "object") throw new Error("导入失败：rock 条目非法");
+        if (typeof rock.id !== "string" || !rock.id) throw new Error("导入失败：rock.id 非法");
+        if (typeof rock.ringId !== "string" || !ringIds.has(rock.ringId)) {
+          throw new Error(`导入失败：rock.ringId 非法: ${rock?.ringId}`);
+        }
+        return { id: rock.id, ringId: rock.ringId };
+      });
+
+      const bombs = cfg.bombs.map((bomb) => {
+        if (!bomb || typeof bomb !== "object") throw new Error("导入失败：bomb 条目非法");
+        if (typeof bomb.id !== "string" || !bomb.id) throw new Error("导入失败：bomb.id 非法");
+        if (typeof bomb.ringId !== "string" || !ringIds.has(bomb.ringId)) {
+          throw new Error(`导入失败：bomb.ringId 非法: ${bomb?.ringId}`);
+        }
+        const countdown = bomb.countdown == null ? 30 : Number(bomb.countdown);
+        if (!Number.isFinite(countdown) || countdown <= 0) {
+          throw new Error(`导入失败：bomb.countdown 非法: ${bomb.id}`);
+        }
+        return { id: bomb.id, ringId: bomb.ringId, countdown: Math.round(countdown) };
+      });
+
+      el.levelId.value = String(Math.round(Number(cfg.id)));
+      el.levelName.value = String(cfg.name);
+      el.ringScale.value = String(Number(cfg.ringScale));
+      state.ringScale = Number(cfg.ringScale);
+      state.rings = rings;
+      state.rocks = rocks;
+      state.bombs = bombs;
+      state.selectedRingId = null;
+      state.dragRingId = null;
+      state.midRotateState = null;
+      refreshEditors();
+    }
+
     function copyTextFallback(text) {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -715,6 +856,17 @@
         return;
       }
       alert("已复制 LevelConfig 片段到剪贴板");
+    });
+
+    el.importBtn.addEventListener("click", () => {
+      try {
+        const cfg = parseImportConfig(el.importInput.value);
+        importConfigToState(cfg);
+      } catch (err) {
+        alert(err?.message || String(err));
+        return;
+      }
+      alert("导入成功");
     });
 
     el.ringScale.addEventListener("change", (e) => {
