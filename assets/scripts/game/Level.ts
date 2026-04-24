@@ -29,16 +29,12 @@ export class Level extends Component {
   private remainingTime: number = 120;
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
-  private readonly onOpenTimeoutDialogHandler = this.onOpenTimeoutDialog.bind(this);
-  private readonly onOpenWinDialogHandler = this.onOpenWinDialog.bind(this);
   private readonly onPauseGameHandler = this.onPauseTimer.bind(this);
   private readonly onResumeGameHandler = this.onResumeTimer.bind(this);
   private readonly onRestartLevelHandler = this.onRestartLevel.bind(this);
 
   onLoad(): void {
     // Register event listeners
-    GM.event.on('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
-    GM.event.on('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.on('pauseGame', this.onPauseGameHandler);
     GM.event.on('resumeGame', this.onResumeGameHandler);
     GM.event.on('restartLevel', this.onRestartLevelHandler);
@@ -46,8 +42,6 @@ export class Level extends Component {
 
   onDestroy(): void {
     this.stopTimer();
-    GM.event.off('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
-    GM.event.off('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.off('pauseGame', this.onPauseGameHandler);
     GM.event.off('resumeGame', this.onResumeGameHandler);
     GM.event.off('restartLevel', this.onRestartLevelHandler);
@@ -116,20 +110,6 @@ export class Level extends Component {
   }
 
   /**
-   * Handle timeout dialog open
-   */
-  private onOpenTimeoutDialog(): void {
-    this.stopTimer();
-  }
-
-  /**
-   * Handle win dialog open
-   */
-  private onOpenWinDialog(): void {
-    this.stopTimer();
-  }
-
-  /**
    * Start countdown timer
    */
   private startTimer(): void {
@@ -145,7 +125,7 @@ export class Level extends Component {
 
       if (this.remainingTime <= 0) {
         this.stopTimer();
-        GM.event.emit('timeout');
+        GM.event.emit('openTimeoutDialog');
       }
     }, 1000);
   }

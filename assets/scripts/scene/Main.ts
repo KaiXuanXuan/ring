@@ -45,8 +45,8 @@ export class Main extends Component {
   private readonly onShowLevelSelectionHandler = this.showLevelSelection.bind(this);
   private readonly onStartLevelHandler = this.startLevel.bind(this);
   private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
-  private readonly onTimeoutHandler = this.onTimeout.bind(this);
-  private readonly onLevelCompleteHandler = this.onLevelComplete.bind(this);
+  private readonly onOpenTimeoutDialogHandler = this.onOpenTimeoutDialog.bind(this);
+  private readonly onOpenWinDialogHandler = this.onOpenWinDialog.bind(this);
   private readonly onOpenFailDialogHandler = this.onOpenFailDialog.bind(this);
   private readonly onAddTimeHandler = this.onAddTime.bind(this);
   private readonly onHintGuideSkipNextAdHandler = () => {
@@ -60,8 +60,8 @@ export class Main extends Component {
     GM.event.on('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.on('startLevel', this.onStartLevelHandler);
     GM.event.on('backToLevelSelection', this.onBackToLevelSelectionHandler);
-    GM.event.on('timeout', this.onTimeoutHandler);
-    GM.event.on('levelComplete', this.onLevelCompleteHandler);
+    GM.event.on('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
+    GM.event.on('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.on('openFailDialog', this.onOpenFailDialogHandler);
     GM.event.on('addTime', this.onAddTimeHandler);
     GM.event.on('hintGuideSkipNextAd', this.onHintGuideSkipNextAdHandler);
@@ -77,8 +77,8 @@ export class Main extends Component {
     GM.event.off('showLevelSelection', this.onShowLevelSelectionHandler);
     GM.event.off('startLevel', this.onStartLevelHandler);
     GM.event.off('backToLevelSelection', this.onBackToLevelSelectionHandler);
-    GM.event.off('timeout', this.onTimeoutHandler);
-    GM.event.off('levelComplete', this.onLevelCompleteHandler);
+    GM.event.off('openTimeoutDialog', this.onOpenTimeoutDialogHandler);
+    GM.event.off('openWinDialog', this.onOpenWinDialogHandler);
     GM.event.off('openFailDialog', this.onOpenFailDialogHandler);
     GM.event.off('addTime', this.onAddTimeHandler);
     GM.event.off('hintGuideSkipNextAd', this.onHintGuideSkipNextAdHandler);
@@ -178,16 +178,16 @@ export class Main extends Component {
   /**
    * Handle timeout event - open TimeoutDialog
    */
-  private async onTimeout(): Promise<void> {
+  private async onOpenTimeoutDialog(): Promise<void> {
+    GM.event.emit('pauseGame');
     await this.openDialog('prefab/TimeoutDialog');
-    GM.event.emit('openTimeoutDialog');
   }
 
   /**
    * Handle level complete event - open WinDialog
    */
-  private async onLevelComplete(): Promise<void> {
-    this.level?.stopTimer();
+  private async onOpenWinDialog(): Promise<void> {
+    GM.event.emit('pauseGame');
     const unlockedLevel = Number(window.GM?.data?.getState('unlockedLevel') ?? 1);
     const nextLevel = Math.min(this.currentLevel + 1, MAX_LEVEL);
     const nextUnlockedLevel = Math.max(unlockedLevel, nextLevel);
@@ -195,7 +195,6 @@ export class Main extends Component {
     AdService.reportLvFinish(this.currentLevel);
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
-      GM.event.emit('openWinDialog', { level: this.currentLevel, nextLevel });
     });
   }
 
@@ -203,6 +202,7 @@ export class Main extends Component {
    * Handle open fail dialog event
    */
   private async onOpenFailDialog(): Promise<void> {
+    GM.event.emit('pauseGame');
     await this.openDialog('prefab/FailDialog');
   }
 

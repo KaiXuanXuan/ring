@@ -484,7 +484,7 @@ export class Runtime extends Component {
     const releaseAnimationsFinished = this.releaseQueue.length === 0 && !this.isProcessingRelease;
     if (allReleased && releaseAnimationsFinished) {
       // 触发关卡完成事件
-      GM.event.emit('levelComplete');
+      GM.event.emit('openWinDialog');
     }
   }
 
