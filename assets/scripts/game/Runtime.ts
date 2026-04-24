@@ -122,6 +122,7 @@ export class Runtime extends Component {
 
   applyHintRelease(): void {
     if (!this.state) return;
+    if (this.isReleaseAnimating()) return;
 
     const candidateRings = Array.from(this.state.rings.values()).filter((ring) => {
       if (ring.isReleased) return false;
@@ -162,6 +163,10 @@ export class Runtime extends Component {
       this.releaseQueue.push({ ringId, isUserTriggered: false });
     }
     this.processReleaseQueue();
+  }
+
+  isReleaseAnimating(): boolean {
+    return this.isProcessingRelease || this.releaseQueue.length > 0;
   }
 
   canSelectRing(ringId: string): boolean {

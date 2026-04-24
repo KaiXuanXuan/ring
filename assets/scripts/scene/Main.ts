@@ -138,6 +138,9 @@ export class Main extends Component {
    * Click hint icon.
    */
   private hint(): void {
+    if (this.runtime?.isReleaseAnimating()) {
+      return;
+    }
     GM.event.emit('hint');
     if (this.skipHintAdOnce) {
       this.skipHintAdOnce = false;
