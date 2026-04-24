@@ -26,12 +26,10 @@ export interface BombConfig {
   countdown?: number;
 }
 
-export type RingScale = 0.5 | 0.4 | 0.3;
-
 export interface LevelConfig {
   id: number;
   name: string;
-  ringScale: RingScale;
+  ringScale: number;
   rings: RingConfig[];
   buckles: BuckleConfig[];
   rocks: RockConfig[];

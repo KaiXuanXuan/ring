@@ -4,7 +4,7 @@
 
 import { _decorator, Component, Node, Vec3, instantiate, Prefab, tween, Tween, UIOpacity, Label } from 'cc';
 import { getLevelConfig } from '../config/LevelConfig';
-import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState, FIXED_GAP_SIZE, RingScale } from './Types';
+import { BuckleConfig, LevelConfig, LevelState, RingState, BombState, RockState } from './Types';
 import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRingIds, isRingConstrained } from './Rules';
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
@@ -26,8 +26,8 @@ export class Runtime extends Component {
   @property(Prefab)
   bombPrefab: Prefab | null = null;
 
-  // 运行时按关卡配置缩放（0.5/0.4/0.3）
-  private ringScale: RingScale = 0.5;
+  // 运行时按关卡配置缩放
+  private ringScale = 0.5;
   private ringRadius: number = Ring.PREFAB_BASE_RADIUS * this.ringScale;
   // 旋转中心偏移（与 Ring.ts 中的 ROTATION_CENTER_OFFSET 一致）
   private readonly ringCenterOffset: Vec3 = new Vec3(0, 15, 0);
@@ -63,6 +63,9 @@ export class Runtime extends Component {
       throw new Error('Runtime 缺少 bombPrefab 绑定');
     }
     const config = getLevelConfig(level);
+    if (!Number.isFinite(config.ringScale) || config.ringScale <= 0) {
+      throw new Error(`Level ringScale 非法: ${config.ringScale}`);
+    }
     this.ringScale = config.ringScale;
     this.ringRadius = Ring.PREFAB_BASE_RADIUS * this.ringScale;
     this.areaNode = areaNode;

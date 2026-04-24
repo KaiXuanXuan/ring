@@ -42,11 +42,7 @@
       </div>
       <div class="row">
         <label>Ring缩放</label>
-        <select id="ringScale">
-          <option value="0.5">0.5</option>
-          <option value="0.4">0.4</option>
-          <option value="0.3">0.3</option>
-        </select>
+        <input id="ringScale" type="number" value="0.5" min="0.01" step="0.1" />
       </div>
 
       <h3>全局参数</h3>
@@ -97,7 +93,7 @@
     // 与 Ring.prefab 中 Buckles/Buckle1..5 的朝向定义一致（按节点名映射）
     const SLOT_ANGLE = { buckle1: -90, buckle2: -45, buckle3: 0, buckle4: 45, buckle5: 90 };
     // 与项目运行时保持一致：
-    // Ring.prefab 基准半径 180，运行时缩放由关卡配置控制（0.5/0.4/0.3）
+    // Ring.prefab 基准半径 180，运行时缩放由关卡配置控制
     const RING_PREFAB_BASE_RADIUS = 180;
     // 编辑器 angle：0°=缺口朝上（世界角逆时针）；导出 angle 与 Runtime 根节点 Z 旋转一一对应（不做额外偏移）
     // Ring.prefab 中 Buckles/Buckle1..5 的局部坐标（以 Ring 根节点为参考）
@@ -673,7 +669,7 @@
 
     el.ringScale.addEventListener("change", (e) => {
       const value = Number(e.target.value);
-      if (value !== 0.5 && value !== 0.4 && value !== 0.3) {
+      if (!Number.isFinite(value) || value <= 0) {
         throw new Error(`非法缩放值: ${e.target.value}`);
       }
       state.ringScale = value;
