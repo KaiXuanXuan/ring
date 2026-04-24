@@ -106,7 +106,7 @@
     const BUCKLE_MIN_ANGLE = -135;
     const BUCKLE_MAX_ANGLE = 135;
     // 与 Runtime.ringCenterOffsetX/Y 一致：配置坐标到可视中心的偏移
-    const RING_CENTER_OFFSET = { x: 0, y: 20 };
+    const RING_CENTER_OFFSET = { x: 0, y: 15 };
     // 普通环颜色池（排除红色），红色仅用于重叠警示
     const RING_COLORS = ["#4ecdc4", "#5b8cff", "#b06bff", "#ffd166", "#3ddc97", "#7bdff2", "#8bc34a"];
     const RING_STROKE_WIDTH = 24;
@@ -400,8 +400,8 @@
     }
 
     function drawBuckleArrow() {
-      const arrowStartY = BUCKLE_RENDER_SIZE.h * 0.22;
-      const arrowEndY = -BUCKLE_RENDER_SIZE.h * 0.30;
+      const arrowStartY = -BUCKLE_RENDER_SIZE.h * 0.22;
+      const arrowEndY = BUCKLE_RENDER_SIZE.h * 0.30;
       const arrowHead = Math.max(6, BUCKLE_RENDER_SIZE.w * 0.22);
       ctx.strokeStyle = "#ff8a00";
       ctx.fillStyle = "#ff8a00";
@@ -413,8 +413,8 @@
 
       ctx.beginPath();
       ctx.moveTo(0, arrowEndY);
-      ctx.lineTo(-arrowHead * 0.5, arrowEndY + arrowHead * 0.75);
-      ctx.lineTo(arrowHead * 0.5, arrowEndY + arrowHead * 0.75);
+      ctx.lineTo(-arrowHead * 0.5, arrowEndY - arrowHead * 0.75);
+      ctx.lineTo(arrowHead * 0.5, arrowEndY - arrowHead * 0.75);
       ctx.closePath();
       ctx.fill();
     }
