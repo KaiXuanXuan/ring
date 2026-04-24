@@ -110,10 +110,10 @@ export class Runtime extends Component {
       if (this.releaseQueue.some(item => item.ringId === ringId)) continue;
 
       ring.isReleased = true;
-      if (ringId === sourceRingId && isUserTriggered) {
+      if (ringId === sourceRingId && isUserTriggered && !this.isProcessingRelease) {
         this.releaseQueue.unshift({ ringId, isUserTriggered });
       } else {
-        this.releaseQueue.push({ ringId, isUserTriggered: false });
+        this.releaseQueue.push({ ringId, isUserTriggered: ringId === sourceRingId ? isUserTriggered : false });
       }
     }
 
@@ -446,8 +446,12 @@ export class Runtime extends Component {
     this.buckleCompsByRing.delete(ringId);
     this.ringComps.delete(ringId);
 
-    // 从队列中移除
-    this.releaseQueue.shift();
+    // 从队列中按 ringId 精确移除，避免并发入队导致误删队头
+    const queueIndex = this.releaseQueue.findIndex((item) => item.ringId === ringId);
+    if (queueIndex < 0) {
+      throw new Error(`finishRelease 队列缺少 ringId: ${ringId}`);
+    }
+    this.releaseQueue.splice(queueIndex, 1);
     this.isProcessingRelease = false;
 
     // 检查并添加连锁释放的 Ring
