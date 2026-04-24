@@ -41,6 +41,7 @@ export class Main extends Component {
   level: Level | null = null;
 
   private currentLevel: number = 1;
+  private skipHintAdOnce = false;
   private readonly onShowLevelSelectionHandler = this.showLevelSelection.bind(this);
   private readonly onStartLevelHandler = this.startLevel.bind(this);
   private readonly onBackToLevelSelectionHandler = this.showLevelSelection.bind(this);
@@ -49,6 +50,9 @@ export class Main extends Component {
   private readonly onLevelCompleteHandler = this.onLevelComplete.bind(this);
   private readonly onOpenFailDialogHandler = this.onOpenFailDialog.bind(this);
   private readonly onAddTimeHandler = this.onAddTime.bind(this);
+  private readonly onHintGuideSkipNextAdHandler = () => {
+    this.skipHintAdOnce = true;
+  };
 
   onLoad(): void {
     AdService.showSplash();
@@ -62,6 +66,7 @@ export class Main extends Component {
     GM.event.on('levelComplete', this.onLevelCompleteHandler);
     GM.event.on('openFailDialog', this.onOpenFailDialogHandler);
     GM.event.on('addTime', this.onAddTimeHandler);
+    GM.event.on('hintGuideSkipNextAd', this.onHintGuideSkipNextAdHandler);
 
     // Default entry: start game view directly
     const storedLevel = Number(window.GM?.data?.getState('currentLevel') ?? 1);
@@ -79,6 +84,7 @@ export class Main extends Component {
     GM.event.off('levelComplete', this.onLevelCompleteHandler);
     GM.event.off('openFailDialog', this.onOpenFailDialogHandler);
     GM.event.off('addTime', this.onAddTimeHandler);
+    GM.event.off('hintGuideSkipNextAd', this.onHintGuideSkipNextAdHandler);
   }
 
   /**
@@ -135,6 +141,11 @@ export class Main extends Component {
    * Apply gameplay hint.
    */
   private onHint(): void {
+    if (this.skipHintAdOnce) {
+      this.skipHintAdOnce = false;
+      this.runtime?.applyHintRelease();
+      return;
+    }
     AdService.showInterstitial(() => {
       this.runtime?.applyHintRelease();
     });

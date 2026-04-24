@@ -25,16 +25,21 @@ const { ccclass, property } = _decorator;
 
 declare const GM: any;
 
-type GuideStep = 0 | 1 | 2;
+type GuideStep = 0 | 1 | 2 | 3;
 
 @ccclass('Guide')
 export class Guide extends Component {
   @property(Prefab)
   guideHandPrefab: Prefab | null = null;
 
-  private readonly tipOffsetY = -300;
+  private readonly tipOffsetByStep: Record<1 | 2 | 3, [number, number]> = {
+    1: [0, -300],
+    2: [-50, -300],
+    3: [-300, 300],
+  };
   private readonly tipPathStep1 = 'ui/text/所有的锁环需要在 规定的时间内解锁';
   private readonly tipPathStep2 = 'ui/text/旋转锁环使锁环与卡扣 对齐，锁环将被解锁。';
+  private readonly tipPathStep3 = 'ui/text/当遇到困难时， 可以使用道具， 消除一个元素。';
   private readonly ringInteractionCenterOffset = new Vec3(0, 15, 0);
   private readonly guideDialogPath = 'prefab/GuideDialog';
 
@@ -53,6 +58,7 @@ export class Guide extends Component {
   private ringId = 'ring3';
   private tipFrameStep1: SpriteFrame | null = null;
   private tipFrameStep2: SpriteFrame | null = null;
+  private tipFrameStep3: SpriteFrame | null = null;
   private tipFramesReady = false;
   private countdownPausedByGuide = false;
   private firstBombLevel = -1;
@@ -71,6 +77,11 @@ export class Guide extends Component {
     this.resumeCountdown();
   };
 
+  private readonly onHintHandler = () => {
+    if (this.step !== 3) return;
+    this.stopGuide();
+  };
+
   onLoad(): void {
     this.firstBombLevel = getFirstBombLevelId();
     this.setupGuideNodes();
@@ -78,6 +89,7 @@ export class Guide extends Component {
     GM.event.on('startLevel', this.onStartLevelHandler);
     GM.event.on('ringReleased', this.onRingReleasedHandler);
     GM.event.on('guideDialogClosed', this.onGuideDialogClosedHandler);
+    GM.event.on('hint', this.onHintHandler);
     input.on(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
     this.initTipFrames();
   }
@@ -86,9 +98,11 @@ export class Guide extends Component {
     void Promise.all([
       this.loadTextFrame(this.tipPathStep1),
       this.loadTextFrame(this.tipPathStep2),
-    ]).then(([step1, step2]) => {
+      this.loadTextFrame(this.tipPathStep3),
+    ]).then(([step1, step2, step3]) => {
       this.tipFrameStep1 = step1;
       this.tipFrameStep2 = step2;
+      this.tipFrameStep3 = step3;
       this.tipFramesReady = true;
       this.checkLevelGuide();
     }).catch((err: unknown) => {
@@ -100,6 +114,7 @@ export class Guide extends Component {
     GM.event.off('startLevel', this.onStartLevelHandler);
     GM.event.off('ringReleased', this.onRingReleasedHandler);
     GM.event.off('guideDialogClosed', this.onGuideDialogClosedHandler);
+    GM.event.off('hint', this.onHintHandler);
     input.off(Input.EventType.TOUCH_END, this.onMaskTouchEnd, this);
     this.resumeCountdown();
   }
@@ -111,9 +126,16 @@ export class Guide extends Component {
         this.startGuide();
       }
       return;
-    } else {
-      this.stopGuide();
     }
+
+    if (level === 5) {
+      if (this.tipFramesReady) {
+        this.startHintGuide();
+      }
+      return;
+    }
+
+    this.stopGuide();
 
     if (level === this.firstBombLevel) {
       void this.openGuideDialog();
@@ -237,7 +259,7 @@ export class Guide extends Component {
     if (!this.progressNode || !this.tipFrameStep1) {
       throw new Error('Guide Step1 初始化不完整');
     }
-    this.focusNode(this.progressNode, this.tipFrameStep1, 'click-gesture');
+    this.focusNode(1, this.progressNode, this.tipFrameStep1, 'click-gesture');
   }
 
   private enterStep2(): void {
@@ -249,10 +271,30 @@ export class Guide extends Component {
     if (!this.tipFrameStep2) {
       throw new Error('Guide Step2 文案资源未就绪');
     }
-    this.focusNode(ringNode, this.tipFrameStep2, 'ring-gesture');
+    this.focusNode(2, ringNode, this.tipFrameStep2, 'ring-gesture');
   }
 
-  private focusNode(target: Node, tipFrame: SpriteFrame, clipName: string): void {
+  private startHintGuide(): void {
+    const gameNode = this.getGameNode();
+    const hintNode = gameNode.getChildByName('Hint');
+    if (!hintNode) {
+      throw new Error('Guide 找不到目标节点: Game/Hint');
+    }
+    const hintIconNode = hintNode.getChildByName('Icon');
+    if (!hintIconNode) {
+      throw new Error('Guide 找不到目标节点: Game/Hint/Icon');
+    }
+    if (!this.tipFrameStep3) {
+      throw new Error('Guide Step3 文案资源未就绪');
+    }
+    this.step = 3;
+    this.node.active = true;
+    this.pauseCountdown();
+    GM.event.emit('hintGuideSkipNextAd');
+    this.focusNode(3, hintNode, this.tipFrameStep3, 'click-gesture');
+  }
+
+  private focusNode(step: 1 | 2 | 3, target: Node, tipFrame: SpriteFrame, clipName: string): void {
     if (!this.spotlight || !this.gestureAnchor || !this.tip || !this.tipSprite) {
       throw new Error('Guide 节点初始化不完整');
     }
@@ -260,7 +302,7 @@ export class Guide extends Component {
     this.applyMaskHole(rect);
     this.placeSpotlight(rect);
     this.placeGesture(rect.center, rect.height, clipName);
-    this.placeTip(rect.center, rect.height, tipFrame);
+    this.placeTip(step, rect.center, rect.height, tipFrame);
   }
 
   private getWorldRect(target: Node): { center: Vec3; width: number; height: number } {
@@ -318,10 +360,11 @@ export class Guide extends Component {
     this.handNode = handNode;
   }
 
-  private placeTip(center: Vec3, _targetHeight: number, frame: SpriteFrame): void {
+  private placeTip(step: 1 | 2 | 3, center: Vec3, _targetHeight: number, frame: SpriteFrame): void {
     if (!this.tip || !this.tipSprite) throw new Error('Guide Tip 未初始化');
+    const [offsetX, offsetY] = this.tipOffsetByStep[step];
     const local = this.toGuideLocal(center);
-    this.tip.setPosition(local.x, local.y + this.tipOffsetY, 0);
+    this.tip.setPosition(local.x + offsetX, local.y + offsetY, 0);
     this.tipSprite.spriteFrame = frame;
     const tf = this.tip.getComponent(UITransform);
     if (!tf) throw new Error('Guide Tip 缺少 UITransform');
