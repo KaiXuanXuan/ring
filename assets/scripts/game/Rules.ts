@@ -43,7 +43,18 @@ export function canRingRelease(
   bucklesByRing: Map<string, BuckleConfig[]>
 ): boolean {
   if (ringState.isReleased) return false;
-  if (isRingConstrained(ringState, allRings, bucklesByRing)) return false;
+
+  // 先检查“本 Ring 自身的 Buckle”是否都已对齐到 linkedRing 的缺口
+  const ownBuckles = bucklesByRing.get(ringState.id) || [];
+  for (const buckle of ownBuckles) {
+    if (!buckle.linkedRingId) continue;
+    const linkedRing = allRings.get(buckle.linkedRingId);
+    if (!linkedRing || linkedRing.isReleased) continue;
+
+    if (!isBuckleAlignedWithRingGap(ringState, buckle.angle, linkedRing)) {
+      return false;
+    }
+  }
 
   for (const [id, otherRing] of allRings) {
     if (id === ringState.id || otherRing.isReleased) continue;
@@ -53,15 +64,7 @@ export function canRingRelease(
       // 只检查连接到要释放 Ring 的 Buckle
       if (buckle.linkedRingId !== ringState.id) continue;
 
-      const buckleAngle = wrapDeg(otherRing.currentAngle + buckle.angle);
-      const gapStart = wrapDeg(ringState.currentAngle);
-      const gapEnd = (gapStart + FIXED_GAP_SIZE) % 360;
-
-      // 使用容差放宽判定：Gap 范围扩大容差
-      const gapStartTolerant = (gapStart - RELEASE_TOLERANCE + 360) % 360;
-      const gapEndTolerant = (gapEnd + RELEASE_TOLERANCE) % 360;
-
-      if (!isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant)) {
+      if (!isBuckleAlignedWithRingGap(otherRing, buckle.angle, ringState)) {
         return false;
       }
     }
@@ -121,6 +124,21 @@ function isAngleInRange(
   } else {
     return normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd;
   }
+}
+
+function isBuckleAlignedWithRingGap(
+  buckleOwnerRing: RingState,
+  buckleRelativeAngle: number,
+  gapOwnerRing: RingState
+): boolean {
+  const buckleAngle = wrapDeg(buckleOwnerRing.currentAngle + buckleRelativeAngle);
+  const gapStart = wrapDeg(gapOwnerRing.currentAngle);
+  const gapEnd = (gapStart + FIXED_GAP_SIZE) % 360;
+
+  // 使用容差放宽判定：Gap 范围扩大容差
+  const gapStartTolerant = (gapStart - RELEASE_TOLERANCE + 360) % 360;
+  const gapEndTolerant = (gapEnd + RELEASE_TOLERANCE) % 360;
+  return isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant);
 }
 
 function wrapDeg(a: number): number {

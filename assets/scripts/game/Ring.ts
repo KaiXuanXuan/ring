@@ -116,7 +116,7 @@ export class Ring extends Component {
       if (this.runtime.isRingConstrained(this.ringId)) {
         this.runtime.playShakeAnimation(this.ringId);
       } else {
-        this.runtime.tryReleaseRing(this.ringId, true); // 用户触发释放
+        this.runtime.releaseRing(this.ringId, true);
       }
     }
   }

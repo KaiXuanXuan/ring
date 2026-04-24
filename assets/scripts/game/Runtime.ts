@@ -90,21 +90,34 @@ export class Runtime extends Component {
     }
     this.syncBuckleNodes(ringId);
 
-    if (checkRelease && canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) {
-      this.releaseRing(ringId, true); // 用户拖拽触发的释放
-    }
+    if (checkRelease) this.releaseRing(ringId, true);
 
     return true;
   }
 
-  tryReleaseRing(ringId: string, isUserTriggered: boolean = false): void {
+  releaseRing(sourceRingId: string, isUserTriggered: boolean = false): void {
     if (!this.state) return;
-    const ring = this.state.rings.get(ringId);
-    if (!ring || ring.isReleased) return;
-    const canRelease = canRingRelease(ring, this.state.rings, this.state.bucklesByRing);
-    if (canRelease) {
-      this.releaseRing(ringId, isUserTriggered);
+
+    const candidateIds = new Set<string>([
+      sourceRingId,
+      ...getLinkedRingIds(sourceRingId, this.state.bucklesByRing),
+    ]);
+
+    for (const ringId of candidateIds) {
+      const ring = this.state.rings.get(ringId);
+      if (!ring || ring.isReleased) continue;
+      if (!canRingRelease(ring, this.state.rings, this.state.bucklesByRing)) continue;
+      if (this.releaseQueue.some(item => item.ringId === ringId)) continue;
+
+      ring.isReleased = true;
+      if (ringId === sourceRingId && isUserTriggered) {
+        this.releaseQueue.unshift({ ringId, isUserTriggered });
+      } else {
+        this.releaseQueue.push({ ringId, isUserTriggered: false });
+      }
     }
+
+    this.processReleaseQueue();
   }
 
   applyHintRelease(): void {
@@ -142,8 +155,13 @@ export class Runtime extends Component {
     }
 
     for (const ringId of selectedIds) {
-      this.releaseRing(ringId, false);
+      const ring = this.state.rings.get(ringId);
+      if (!ring || ring.isReleased) continue;
+      if (this.releaseQueue.some(item => item.ringId === ringId)) continue;
+      ring.isReleased = true;
+      this.releaseQueue.push({ ringId, isUserTriggered: false });
     }
+    this.processReleaseQueue();
   }
 
   canSelectRing(ringId: string): boolean {
@@ -306,31 +324,6 @@ export class Runtime extends Component {
     this.isProcessingRelease = false;
   }
 
-  private releaseRing(ringId: string, isUserTriggered: boolean = false): void {
-    if (!this.state) return;
-
-    const ring = this.state.rings.get(ringId);
-    if (!ring || ring.isReleased) return;
-
-    // 检查是否已经在队列中
-    if (this.releaseQueue.some(item => item.ringId === ringId)) {
-      return;
-    }
-
-    // 标记为已释放，防止重复添加
-    ring.isReleased = true;
-
-    // 用户触发的释放优先级更高，添加到队列前面
-    if (isUserTriggered) {
-      this.releaseQueue.unshift({ ringId, isUserTriggered });
-    } else {
-      this.releaseQueue.push({ ringId, isUserTriggered });
-    }
-
-    // 处理释放队列
-    this.processReleaseQueue();
-  }
-
   /**
    * 处理释放队列，按优先级播放动画
    */
@@ -464,7 +457,7 @@ export class Runtime extends Component {
       if (!this.releaseQueue.some(item => item.ringId === linkedId)) {
         const linkedRing = this.state.rings.get(linkedId);
         if (linkedRing && !linkedRing.isReleased) {
-          this.tryReleaseRing(linkedId, false); // 连锁释放，不是用户触发
+          this.releaseRing(linkedId, false); // 连锁释放，不是用户触发
         }
       }
     }
