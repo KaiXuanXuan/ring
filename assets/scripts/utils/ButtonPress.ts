@@ -1,13 +1,16 @@
 import { _decorator, Button, Color, Component, Node, Sprite, tween } from 'cc';
-import { UI_CONFIG } from '../config/UiConfig';
 
 const { ccclass, requireComponent } = _decorator;
+const BUTTON_PRESS_ANIM_DURATION = 0.1;
+const BUTTON_PRESS_SCALE = 0.9;
+const BUTTON_ENABLED_TINT = Color.WHITE.clone();
+const BUTTON_PRESS_COLOR = new Color(204, 204, 204, 255);
 
 @ccclass('ButtonPress')
 @requireComponent(Button)
 export class ButtonPress extends Component {
 
-    private _duration: number = UI_CONFIG.BUTTON_PRESS_ANIM_DURATION;
+    private _duration: number = BUTTON_PRESS_ANIM_DURATION;
     private _tween: any = null;
     private _sprites: Sprite[] = [];
     private _button: Button | null = null;
@@ -54,14 +57,14 @@ export class ButtonPress extends Component {
         this._stopTween();
         const state: { scale: number; progress: number } = { scale: 1, progress: 0 };
         this._tween = tween(state)
-            .to(this._duration, { scale: UI_CONFIG.BUTTON_PRESS_SCALE, progress: 1 }, {
+            .to(this._duration, { scale: BUTTON_PRESS_SCALE, progress: 1 }, {
                 easing: 'sineOut',
                 onUpdate: () => {
                     this.node.setScale(state.scale, state.scale, 1);
                     this._sprites.forEach((sprite) => {
                         sprite.color = this._lerpColor(
-                            UI_CONFIG.BUTTON_ENABLED_TINT,
-                            UI_CONFIG.BUTTON_PRESS_COLOR,
+                            BUTTON_ENABLED_TINT,
+                            BUTTON_PRESS_COLOR,
                             state.progress,
                         );
                     });
@@ -84,7 +87,7 @@ export class ButtonPress extends Component {
             return;
         }
         this._stopTween();
-        const state: { scale: number; progress: number } = { scale: UI_CONFIG.BUTTON_PRESS_SCALE, progress: 1 };
+        const state: { scale: number; progress: number } = { scale: BUTTON_PRESS_SCALE, progress: 1 };
         this._tween = tween(state)
             .to(this._duration, { scale: 1, progress: 0 }, {
                 easing: 'sineOut',
@@ -92,8 +95,8 @@ export class ButtonPress extends Component {
                     this.node.setScale(state.scale, state.scale, 1);
                     this._sprites.forEach((sprite) => {
                         sprite.color = this._lerpColor(
-                            UI_CONFIG.BUTTON_ENABLED_TINT,
-                            UI_CONFIG.BUTTON_PRESS_COLOR,
+                            BUTTON_ENABLED_TINT,
+                            BUTTON_PRESS_COLOR,
                             state.progress,
                         );
                     });
