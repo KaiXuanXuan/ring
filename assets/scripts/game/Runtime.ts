@@ -98,6 +98,11 @@ export class Runtime extends Component {
   releaseRing(sourceRingId: string, isUserTriggered: boolean = false): void {
     if (!this.state) return;
     const activeDraggingRingId = Ring.getActiveDraggingRingId();
+    // 连锁传播命中“正在拖动的环”时，直接截断该分支，避免继续向其关联环扩散。
+    // 仅允许“用户松手触发的当前拖动环”走释放判定。
+    if (activeDraggingRingId && sourceRingId === activeDraggingRingId && !isUserTriggered) {
+      return;
+    }
 
     const candidateIds = new Set<string>([
       sourceRingId,
@@ -126,6 +131,7 @@ export class Runtime extends Component {
     if (!this.state) return;
     if (this.isReleaseAnimating()) return;
     const activeDraggingRingId = Ring.getActiveDraggingRingId();
+    if (activeDraggingRingId) return;
 
     const candidateRings = Array.from(this.state.rings.values()).filter((ring) => {
       if (ring.isReleased) return false;
