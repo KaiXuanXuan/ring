@@ -5,7 +5,7 @@
  * Only entry point for rule definitions.
  */
 
-import { RingState, BombState, BuckleConfig, FIXED_GAP_SIZE, RELEASE_TOLERANCE } from './Types';
+import { RingState, BombState, BuckleConfig, FIXED_GAP_SIZE } from './Types';
 
 export function isRingConstrained(
   ringState: RingState,
@@ -132,13 +132,12 @@ function isBuckleAlignedWithRingGap(
   gapOwnerRing: RingState
 ): boolean {
   const buckleAngle = wrapDeg(buckleOwnerRing.currentAngle + buckleRelativeAngle);
-  const gapStart = wrapDeg(gapOwnerRing.currentAngle);
-  const gapEnd = (gapStart + FIXED_GAP_SIZE) % 360;
+  const gapHalfSize = FIXED_GAP_SIZE * 0.5;
+  const gapCenter = wrapDeg(gapOwnerRing.currentAngle);
+  const gapStart = wrapDeg(gapCenter - gapHalfSize);
+  const gapEnd = wrapDeg(gapCenter + gapHalfSize);
 
-  // 使用容差放宽判定：Gap 范围扩大容差
-  const gapStartTolerant = (gapStart - RELEASE_TOLERANCE + 360) % 360;
-  const gapEndTolerant = (gapEnd + RELEASE_TOLERANCE) % 360;
-  return isAngleInRange(buckleAngle, gapStartTolerant, gapEndTolerant);
+  return isAngleInRange(buckleAngle, gapStart, gapEnd);
 }
 
 function wrapDeg(a: number): number {

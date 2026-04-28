@@ -51,10 +51,6 @@ export class Level extends Component {
    * Initialize level display and start timer
    */
   initLevel(level: number): void {
-    console.log('[Level] initLevel called with level:', level);
-    console.log('[Level] timerLabel:', this.timerLabel);
-    console.log('[Level] progressFill:', this.progressFill);
-    console.log('[Level] levelLabel:', this.levelLabel);
     this.currentLevel = level;
     const config = getLevelConfig(level);
     this.totalTime = config.totalTimeSeconds;
@@ -115,14 +111,12 @@ export class Level extends Component {
    * Start countdown timer
    */
   private startTimer(): void {
-    console.log('[Level] startTimer called');
     this.stopTimer();
     this.isRunning = true;
     this.timerInterval = setInterval(() => {
       if (!this.isRunning) return;
 
       this.remainingTime--;
-      console.log('[Level] Time remaining:', this.remainingTime);
       this.updateTimerDisplay();
 
       if (this.remainingTime <= 0) {
