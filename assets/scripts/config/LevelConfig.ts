@@ -240,6 +240,29 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
     rocks: [],
     bombs: [],
   },
+  11: {
+    name: 'Level 11',
+    totalTimeSeconds: 30,
+    ringScale: 0.5,
+    rings: [
+      { id: 'ring1', position: { x: -255, y: 155 }, angle: 90 },
+      { id: 'ring2', position: { x: 0, y: 155 }, angle: 0 },
+      { id: 'ring3', position: { x: 255, y: 155 }, angle: -90 },
+      { id: 'ring4', position: { x: -125, y: 0 }, angle: -270 },
+      { id: 'ring5', position: { x: 125, y: 0 }, angle: 270 },
+      { id: 'ring6', position: { x: 0, y: -155 }, angle: -180 },
+    ],
+    buckles: [
+      { ringId: 'ring1', angle: -50, linkedRingId: 'ring4' },
+      { ringId: 'ring2', angle: 40, linkedRingId: 'ring5' },
+      { ringId: 'ring2', angle: -40, linkedRingId: 'ring4' },
+      { ringId: 'ring3', angle: 50, linkedRingId: 'ring5' },
+      { ringId: 'ring6', angle: 40, linkedRingId: 'ring4' },
+      { ringId: 'ring6', angle: -40, linkedRingId: 'ring5' },
+    ],
+    rocks: [{ id: 'rock1', ringId: 'ring2' }],
+    bombs: [{ id: 'bomb1', ringId: 'ring6', countdown: 30 }],
+  },
 };
 
 export const MAX_LEVEL = Object.keys(LEVEL_CONFIGS).length;
