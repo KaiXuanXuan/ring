@@ -7,6 +7,7 @@
  */
 
 import { _decorator, Component, Node, Button, tween, Vec3 } from 'cc';
+import { playBGM, stopBGM } from '../utils/AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -148,8 +149,12 @@ export class SettingDialog extends Component {
    * Update BGM volume based on state
    * @param isOn - Whether BGM should be on
    */
-  private updateBgmVolume(isOn: boolean): void {
-    GM.audio.setBgmVolume(isOn ? 1 : 0);
+  private async updateBgmVolume(isOn: boolean): Promise<void> {
+    if (isOn) {
+      playBGM('bgm');
+    } else {
+      stopBGM();
+    }
   }
 
   /**

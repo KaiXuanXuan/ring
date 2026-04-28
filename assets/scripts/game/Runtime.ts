@@ -9,6 +9,7 @@ import { canRingRotate, canRingRelease, shouldBombExplodeOnRelease, getLinkedRin
 import { Ring } from './Ring';
 import { Buckle } from './Buckle';
 import { Bomb } from './Bomb';
+import { playSFX } from '../utils/AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -439,6 +440,8 @@ export class Runtime extends Component {
    */
   private finishRelease(ringId: string): void {
     if (!this.state) return;
+    // Play ring release SFX
+    playSFX('解环');
     GM.event.emit('ringReleased', { ringId });
 
     // 处理炸弹

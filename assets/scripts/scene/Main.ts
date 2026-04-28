@@ -10,6 +10,7 @@ import { getLevelConfig, MAX_LEVEL } from '../config/LevelConfig';
 import { Runtime } from '../game/Runtime';
 import { Level } from '../game/Level';
 import { AdService } from '../service/AdService';
+import { playBGM, playSFX } from '../utils/AudioManager';
 
 const { ccclass, property } = _decorator;
 
@@ -65,6 +66,9 @@ export class Main extends Component {
     GM.event.on('openFailDialog', this.onOpenFailDialogHandler);
     GM.event.on('addTime', this.onAddTimeHandler);
     GM.event.on('hintGuideSkipNextAd', this.onHintGuideSkipNextAdHandler);
+
+    // Play BGM when game starts
+    playBGM('bgm');
 
     // Default entry: start game view directly
     const storedLevel = Number(window.GM?.data?.getState('currentLevel') ?? 1);
@@ -197,6 +201,8 @@ export class Main extends Component {
     const nextUnlockedLevel = Math.max(unlockedLevel, nextLevel);
     window.GM?.data?.setState({ unlockedLevel: nextUnlockedLevel });
     AdService.reportLvFinish(this.currentLevel);
+    // Play win SFX
+    playSFX('win');
     AdService.showInterstitial(async () => {
       await this.openDialog('prefab/WinDialog');
       GM.event.emit('updateLevelLabel', { level: this.currentLevel, nextLevel: nextEffectiveLevel });
@@ -208,6 +214,8 @@ export class Main extends Component {
    */
   private async onOpenFailDialog(): Promise<void> {
     GM.event.emit('pauseGame');
+    // Play fail SFX
+    playSFX('fail');
     await this.openDialog('prefab/FailDialog');
   }
 

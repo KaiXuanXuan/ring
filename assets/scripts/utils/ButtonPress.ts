@@ -1,4 +1,5 @@
 import { _decorator, Button, Color, Component, Node, Sprite, tween } from 'cc';
+import { playSFX } from './AudioManager';
 
 const { ccclass, requireComponent } = _decorator;
 const BUTTON_PRESS_ANIM_DURATION = 0.1;
@@ -75,9 +76,7 @@ export class ButtonPress extends Component {
 
     /** 播放点击音效 */
     private playClickSound(): void {
-        const sfxEnabled = window.GM?.data.getState<boolean>('sfx');
-        if (!sfxEnabled) return;
-        window.GM?.audio.playSfx('点击', { volume: 0.8 }).catch(() => {});
+        playSFX('点击', { volume: 1.0 });
     }
 
     private _onRelease() {
