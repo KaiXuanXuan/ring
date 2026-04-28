@@ -25,8 +25,8 @@ export class Level extends Component {
   timerLabel: Node | null = null; // Timer label node
 
   private currentLevel: number = 1;
-  private totalTime: number = 120; // Total time per level in seconds
-  private remainingTime: number = 120;
+  private totalTime: number = 0; // Total time per level in seconds
+  private remainingTime: number = 0;
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
   private readonly onPauseGameHandler = this.onPauseTimer.bind(this);
@@ -56,6 +56,8 @@ export class Level extends Component {
     console.log('[Level] progressFill:', this.progressFill);
     console.log('[Level] levelLabel:', this.levelLabel);
     this.currentLevel = level;
+    const config = getLevelConfig(level);
+    this.totalTime = config.totalTimeSeconds;
     this.remainingTime = this.totalTime;
     this.isRunning = true;
 

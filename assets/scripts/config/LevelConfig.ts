@@ -3,6 +3,7 @@ import { LevelConfig } from '../game/Types';
 export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   1: {
     name: 'Level 1',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: -140 }, angle: 180 },
@@ -18,6 +19,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   2: {
     name: 'Level 2',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: 0 }, angle: 180 },
@@ -35,6 +37,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   3: {
     name: 'Level 3',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: -140 }, angle: 180 },
@@ -52,6 +55,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   4: {
     name: 'Level 4',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: -100 }, angle: 2700 },
@@ -69,6 +73,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   5: {
     name: 'Level 5',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: 0 }, angle: -135 },
@@ -88,6 +93,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   6: {
     name: 'Level 6',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: -200, y: 0 }, angle: 90 },
@@ -107,6 +113,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   7: {
     name: 'Level 7',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: 0, y: 200 }, angle: 0 },
@@ -132,6 +139,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   8: {
     name: 'Level 8',
+    totalTimeSeconds: 120,
     ringScale: 0.5,
     rings: [
       { id: 'ring1', position: { x: -100, y: 240 }, angle: -45 },
@@ -157,6 +165,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   9: {
     name: 'Level 9',
+    totalTimeSeconds: 120,
     ringScale: 0.4,
     rings: [
       { id: 'ring1', position: { x: -112, y: -112 }, angle: -45 },
@@ -190,6 +199,7 @@ export const LEVEL_CONFIGS: Record<number, LevelConfig> = {
   },
   10: {
     name: 'Level 10',
+    totalTimeSeconds: 120,
     ringScale: 0.3,
     rings: [
       { id: 'ring1', position: { x: -255, y: 0 }, angle: 90 },

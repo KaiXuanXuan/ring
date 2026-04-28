@@ -27,6 +27,7 @@ export interface BombConfig {
 
 export interface LevelConfig {
   name: string;
+  totalTimeSeconds: number;
   ringScale: number;
   rings: RingConfig[];
   buckles: BuckleConfig[];

@@ -684,6 +684,7 @@
       return {
         id: Number(el.levelId.value) || 1,
         name: el.levelName.value || `Level ${el.levelId.value || 1}`,
+        totalTimeSeconds: 120,
         ringScale: state.ringScale,
         rings: state.rings.map(r => ({
           id: r.id,
@@ -738,6 +739,7 @@
       return [
         `  ${levelKey}: {`,
         `    name: ${toTsSingleQuotedString(cfg.name)},`,
+        `    totalTimeSeconds: ${cfg.totalTimeSeconds},`,
         `    ringScale: ${cfg.ringScale},`,
         `    rings: [`,
         ...ringLines,
